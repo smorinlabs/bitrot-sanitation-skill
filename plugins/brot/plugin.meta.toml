@@ -1,0 +1,9 @@
+name = "brot"
+version = "0.0.0"
+description = "Teaches coding agents to register what they create (worktrees, branches, PRs, files, cloud resources) with the brot CLI and to clean it up only through brot's checks. Ships the brot skill and thin hooks that call `brot hook <harness> <event>`."
+author = "Steve Morin"
+keywords = ["cleanup", "worktrees", "branches", "registry", "hooks", "brot"]
+
+[interface]
+displayName = "brot"
+category = "Developer Tools"

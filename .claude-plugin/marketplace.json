@@ -1,0 +1,29 @@
+{
+  "name": "bitrot-sanitation-skill",
+  "owner": {
+    "name": "Steve Morin"
+  },
+  "metadata": {
+    "description": "The brot plugin: track and safely clean up what coding agents create",
+    "version": "0.0.0"
+  },
+  "plugins": [
+    {
+      "name": "brot",
+      "source": "./plugins/brot",
+      "description": "Teaches coding agents to register what they create (worktrees, branches, PRs, files, cloud resources) with the brot CLI and to clean it up only through brot's checks. Ships the brot skill and thin hooks that call `brot hook <harness> <event>`.",
+      "version": "0.0.0",
+      "author": {
+        "name": "Steve Morin"
+      },
+      "keywords": [
+        "cleanup",
+        "worktrees",
+        "branches",
+        "registry",
+        "hooks",
+        "brot"
+      ]
+    }
+  ]
+}

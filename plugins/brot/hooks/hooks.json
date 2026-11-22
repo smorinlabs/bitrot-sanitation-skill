@@ -1,0 +1,87 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v brot >/dev/null 2>&1; then brot hook claude-code session-start; fi"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v brot >/dev/null 2>&1; then brot hook claude-code session-end; fi"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v brot >/dev/null 2>&1; then brot hook claude-code pre-tool; fi"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v brot >/dev/null 2>&1; then brot hook claude-code post-tool-use; fi"
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "Bash|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v brot >/dev/null 2>&1; then brot hook claude-code post-tool-use-failure; fi"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v brot >/dev/null 2>&1; then brot hook claude-code subagent-start; fi"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v brot >/dev/null 2>&1; then brot hook claude-code subagent-stop; fi"
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v brot >/dev/null 2>&1; then brot hook claude-code post-compact; fi"
+          }
+        ]
+      }
+    ]
+  }
+}
