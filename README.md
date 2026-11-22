@@ -103,6 +103,7 @@ Codex and Muse approve each hook by its definition. See `docs/design.md` §3.3.
 
 - Requirements: `docs/requirements.md`
 - Design: `docs/design.md`
+- Skill page: `docs/skills/brot.md`
 
 ## License
 
