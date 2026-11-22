@@ -154,7 +154,8 @@ Each check runs in a throwaway harness home (`CODEX_HOME`, the Muse `XDG_*` vari
 1. Install the plugin from a local marketplace on each harness, and confirm the hooks fire, using `brot doctor` with a throwaway `BROT_DB`. Done so far (2026-11-22, [O]):
    - Muse: installed and approved in a throwaway Muse home. Its `post-tool-use` hook ran `brot` through `muse plugins hook test`.
    - OpenCode: the module ran against the real `brot` with a captured payload. `brot doctor` reported it `declared` and `firing` from a throwaway OpenCode config directory.
-   - Claude Code and Codex: not yet run.
+   - Claude Code 2.1.330: one headless session with `--plugin-dir` and a throwaway `BROT_DB` ran `git worktree add`. `brot` recorded `session-start` (ok), `pre-tool` (ignored), `post-tool-use` (ok) and `session-end` (ok), with plugin version `0.0.0`, and registered the worktree and its branch as hook registrations needing validation.
+   - Codex: not run. The Codex manifest has no `hooks` key until D-1 is settled, and a throwaway `CODEX_HOME` has no login.
 2. On Codex and Muse, approve the hooks. Bump only the plugin version, reinstall, and confirm the hooks still run without a new approval. This tests the HC-06a premise.
 3. ~~Run Muse with `brot` missing~~ Done: the hook fails and does not block (§3.2).
 4. ~~Measure Muse `pre-tool` latency~~ Done 2026-11-22: 8.9 ms p95 (D-2).
