@@ -1,0 +1,18 @@
+[project]
+name = "bitrot-sanitation-skill"
+version = "0.0.0"
+description = "Plugin and skill that teach coding agents to track and safely clean up what they create, using the brot CLI"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+# This repo is a marketplace, not a Python package. uv manages only the dev
+# toolchain (harness-kit) that generates the manifests.
+[tool.uv]
+package = false
+
+[dependency-groups]
+dev = ["harness-kit"]
+
+[tool.uv.sources]
+harness-kit = { git = "https://github.com/smorinlabs/harness-kit", tag = "v0.5.0" }

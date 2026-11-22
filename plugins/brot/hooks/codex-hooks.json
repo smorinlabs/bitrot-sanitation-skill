@@ -1,0 +1,75 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v brot >/dev/null 2>&1; then brot hook codex session-start; fi"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v brot >/dev/null 2>&1; then brot hook codex session-end; fi"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v brot >/dev/null 2>&1; then brot hook codex pre-tool; fi"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v brot >/dev/null 2>&1; then brot hook codex post-tool-use; fi"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v brot >/dev/null 2>&1; then brot hook codex subagent-start; fi"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v brot >/dev/null 2>&1; then brot hook codex subagent-stop; fi"
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v brot >/dev/null 2>&1; then brot hook codex post-compact; fi"
+          }
+        ]
+      }
+    ]
+  }
+}

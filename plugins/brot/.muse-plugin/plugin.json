@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "name": "brot",
+  "version": "0.0.0",
+  "description": "Register what coding agents create with the brot CLI, and clean it up only through brot's checks.",
+  "compat": {
+    "manifestDir": ".muse-plugin"
+  },
+  "capabilities": {
+    "skills": [
+      {
+        "id": "brot",
+        "path": "skills/brot/SKILL.md"
+      }
+    ],
+    "hooks": [
+      {
+        "id": "brot-session-start",
+        "event": "SessionStart",
+        "command": [
+          "brot",
+          "hook",
+          "muse",
+          "session-start"
+        ],
+        "timeoutMs": 5000
+      },
+      {
+        "id": "brot-session-end",
+        "event": "SessionEnd",
+        "command": [
+          "brot",
+          "hook",
+          "muse",
+          "session-end"
+        ],
+        "timeoutMs": 5000
+      },
+      {
+        "id": "brot-pre-tool",
+        "event": "PreToolUse",
+        "command": [
+          "brot",
+          "hook",
+          "muse",
+          "pre-tool"
+        ],
+        "timeoutMs": 5000
+      },
+      {
+        "id": "brot-post-tool-use",
+        "event": "PostToolUse",
+        "command": [
+          "brot",
+          "hook",
+          "muse",
+          "post-tool-use"
+        ],
+        "timeoutMs": 5000
+      },
+      {
+        "id": "brot-post-tool-use-failure",
+        "event": "PostToolUseFailure",
+        "command": [
+          "brot",
+          "hook",
+          "muse",
+          "post-tool-use-failure"
+        ],
+        "timeoutMs": 5000
+      },
+      {
+        "id": "brot-subagent-start",
+        "event": "SubagentStart",
+        "command": [
+          "brot",
+          "hook",
+          "muse",
+          "subagent-start"
+        ],
+        "timeoutMs": 5000
+      },
+      {
+        "id": "brot-subagent-stop",
+        "event": "SubagentStop",
+        "command": [
+          "brot",
+          "hook",
+          "muse",
+          "subagent-stop"
+        ],
+        "timeoutMs": 5000
+      },
+      {
+        "id": "brot-post-compact",
+        "event": "PostCompact",
+        "command": [
+          "brot",
+          "hook",
+          "muse",
+          "post-compact"
+        ],
+        "timeoutMs": 5000
+      }
+    ]
+  }
+}

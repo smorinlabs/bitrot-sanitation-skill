@@ -1,0 +1,33 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # tags, for the hook-stability check
+      - uses: astral-sh/setup-uv@v10.0.1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: Generated manifests are current
+        run: uv run harness-kit gen --check
+      - name: Hook tests
+        # The replay layer needs brot and its fixtures; it is skipped here and
+        # run locally with BROT_FIXTURES set.
+        # Stability is checked on pull requests only: after a PR labelled
+        # hook-change merges, main differs from the last tag until the release.
+        env:
+          HOOK_CHANGE_FLAGGED: ${{ (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'hook-change')) && '1' || '' }}
+        run: python3 -I tests/hooks.py
+      - name: OpenCode module tests
+        run: node --test tests/opencode.test.mjs

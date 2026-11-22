@@ -1,0 +1,12 @@
+# Marketplace identity, consumed by harness-kit to generate
+# .claude-plugin/marketplace.json (Claude Code) and
+# .agents/plugins/marketplace.json (Codex). Per-plugin metadata lives in
+# plugins/<name>/plugin.meta.toml.
+[marketplace]
+name = "bitrot-sanitation-skill"
+description = "The brot plugin: track and safely clean up what coding agents create"
+version = "0.0.0"
+display_name = "bitrot sanitation"
+
+[marketplace.owner]
+name = "Steve Morin"
