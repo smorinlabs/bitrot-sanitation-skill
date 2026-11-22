@@ -1,6 +1,6 @@
 # T4 — `bitrot-sanitation-skill`: design
 
-**Status:** design phase, draft 1, written 2026-11-22 against `brot` v0.8.2. It implements `docs/requirements.md` (draft 3). Section 9 lists the decisions that are still open.
+**Status:** design phase, draft 1, written 2026-11-22 against `brot` v0.8.2. It implements `docs/requirements.md` (draft 3). The three decisions in §9 were settled on 2026-11-22.
 **Harness versions checked:** Claude Code 2.1.330, Codex `codex-cli 0.171.0`, Muse Code 1.4.25, OpenCode v2.3.0, harness-kit 0.4.0.
 **Evidence labels** are as in requirements §0.4: **[O]** observed on 2026-11-22, **[D]** from the harness's official documentation, **[U]** unverified.
 
@@ -164,9 +164,9 @@ Each check runs in a throwaway harness home (`CODEX_HOME`, the Muse `XDG_*` vari
 
 | ID | Question | Options | Recommendation |
 |---|---|---|---|
-| D-1 | How does the Codex manifest get its `hooks` key? harness-kit 0.4.0 cannot write it, and `plugin.meta.toml` rejects unknown keys | A: add an optional `codex_hooks` path to harness-kit (a separate PR in that repo), then generate. B: set `codex = false` and hand-maintain `.codex-plugin/plugin.json` | **A**. It keeps DS-04's one-change version bump, and other plugins with Codex hooks will need it too |
+| D-1 | How does the Codex manifest get its `hooks` key? harness-kit 0.4.0 cannot write it, and `plugin.meta.toml` rejects unknown keys | A: add an optional `codex_hooks` path to harness-kit (a separate PR in that repo), then generate. B: set `codex = false` and hand-maintain `.codex-plugin/plugin.json` | **Decided 2026-11-22 (owner): A.** Until the harness-kit release lands, the plugin is not installable on Codex (README) |
 | D-2 | Muse rejects `matcher`, so a Muse `pre-tool` hook runs `brot` on every tool call | A: declare it. B: leave it out until Muse supports matchers | **Decided on evidence: A.** `brot hook muse pre-tool` measured 7.7 ms p50 and 8.9 ms p95 over 60 runs (2026-11-22, brot 0.8.2), far inside the 100 ms p95 budget of T3 `FR-HOOK-7` |
-| D-3 | OpenCode session ID for `brot` commands the agent runs (HC-12, T3 `FR-HOOK-4`) | A: inject `BROT_SESSION` as env. B: prefix the command, as HC-12 says. C: inject nothing and require OpenCode 2.3.0 or later, which sets `OPENCODE_SESSION_ID` itself | **C (built).** It leaves the agent's command unchanged. It departs from HC-12, so it needs the owner's approval; B can be added later without changing any other hook |
+| D-3 | OpenCode session ID for `brot` commands the agent runs (HC-12, T3 `FR-HOOK-4`) | A: inject `BROT_SESSION` as env. B: prefix the command, as HC-12 says. C: inject nothing and require OpenCode 2.3.0 or later, which sets `OPENCODE_SESSION_ID` itself | **Decided 2026-11-22 (owner): C.** v1 requires OpenCode 2.3.0 or later. The prefix can be added later without changing any other hook |
 
 ## 10. Notes for T3 (`brot`)
 
