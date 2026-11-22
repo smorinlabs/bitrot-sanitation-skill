@@ -10,7 +10,7 @@ globalThis.Bun = {
     let input = "";
     const rec = { argv, get payload() { return JSON.parse(input); } };
     calls.push(rec);
-    const out = argv[3] === "session-created" ? '{"context":"2 blockers cleared"}\n' : "";
+    const out = argv[3] === "session-created" || argv[3] === "session-forked" ? '{"context":"2 blockers cleared"}\n' : "";
     return {
       stdin: { write: (s) => (input += s), end() {} },
       stdout: new Blob([out]).stream(),
@@ -82,6 +82,9 @@ test("pre-tool only for the shell tool; fork forwards the new session ID", async
   await tick();
   assert.deepEqual(names(), ["brot hook opencode pre-tool", "brot hook opencode session-forked"]);
   assert.deepEqual(calls[1].payload, { sessionID: "f1" });
+  const e = { sessionID: "f1", system: [] };
+  ctx.hooks["session.context"](e);
+  assert.deepEqual(e.system, [{ type: "text", text: "2 blockers cleared" }]);
 });
 
 test("a missing brot never throws into OpenCode", async () => {

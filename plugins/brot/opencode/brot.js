@@ -91,7 +91,9 @@ export default {
     });
 
     ctx.session.hook("fork", async (e) => {
-      if (e && e.sessionID) void brot("session-forked", { sessionID: e.sessionID }, false);
+      if (!e || !e.sessionID) return;
+      startedRoots.add(e.sessionID);
+      keepContext(e.sessionID, await brot("session-forked", { sessionID: e.sessionID }, true));
     });
 
     ctx.session.hook("context", (e) => {

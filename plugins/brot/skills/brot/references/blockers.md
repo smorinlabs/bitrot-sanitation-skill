@@ -10,7 +10,7 @@ brot blocker add <obj> --condition pr-merged-or-closed --ref <pr-url>
 brot blocker add <obj> --condition path-absent --ref <path>
 brot blocker add <obj> --condition branch-merged --ref <branch> [--base <branch>]
 brot blocker add <obj> --condition object-cleaned --ref <obj>
-brot blocker add <obj> --condition cloud-gone
+brot blocker add <obj> --condition cloud-gone --ref <provider>/<account>/<region>/<resource-type>/<resource-id>
 ```
 
 `brot blocker evaluate` re-checks them. Pull-request conditions make network

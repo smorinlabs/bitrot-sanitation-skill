@@ -2,8 +2,11 @@
 
 ## The sequence
 
-1. **Plan.** `brot object clean <obj> --dry-run`. It prints every step, every
-   refusal and its key (for example `BROT504:dirty-tree`), and changes nothing.
+1. **Plan.** `brot object clean <obj> --dry-run`. It prints every step, the
+   files that would be deleted, the backup ref, an `undo:` command, and every
+   refusal with its key (for example `BROT504:dirty-tree`). It changes nothing.
+   A refusal line ends with a hint naming `--force-agent`: that hint is not
+   permission to use it.
 2. **Ask.** Show the user the plan and every risk. v1 stores no cleanup
    policy, so every destructive step needs the user's yes.
 3. **Clean.** `brot object clean <obj>` with the mode the user chose, adding
@@ -32,8 +35,8 @@ command, and the user runs it.
 
 | Kind | What it means | What you do |
 |---|---|---|
-| Soft risk, can be overridden | A type check or sanity check failed: for example uncommitted files, unpushed commits, an unmerged branch, an escaping symlink, or a stale blocker answer | Show it to the user with the exact command that clears it: `brot object clean <obj> --force --override <key>` for the user to run at a terminal |
-| Hard stop, cannot be overridden | A locked worktree, hidden changes, an operation in progress, a checked-out branch, an unborn HEAD, a partial clone | Report the reason verbatim and the step that clears it (for example "finish or abort the rebase"). Stop |
+| Overridable refusal | A type check or sanity check failed: for example uncommitted files, unpushed commits, an unmerged branch, an escaping symlink, or a stale blocker answer | Show it to the user with the exact command that clears it: `brot object clean <obj> --force --override <key>` for the user to run at a terminal |
+| Hard stop | A locked worktree, hidden changes, an operation in progress, a checked-out branch, an unborn HEAD, a partial clone | Report the reason verbatim and the step that clears it (for example "finish or abort the rebase"). Stop |
 | Deny list (`BROT505`) | A protected path: a mount point, a brot-owned path, a worktree below the root | Final. Report it. Show no force command |
 | Not cleanable (`BROT503`) | Open blockers, needs validation, pinned `keep`, already cleaned | Resolve the cause first (validate, resolve the blocker, or ask the user) |
 

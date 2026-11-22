@@ -46,10 +46,13 @@ the end report, and recovery when hooks are not running.
   risk and hard stop.
 - **Ask the user before each destructive step.** v1 of `brot` stores no cleanup
   policy, so there is no setting that allows unattended deletes.
-- **Soft risk:** weigh it, ask, and state every accepted soft risk in your report.
-- **Hard stop:** report the reason verbatim and stop. Show the user the exact
-  force command for a refusal a force can clear. A deny-list refusal is final:
-  show no force command for it.
+- **Overridable refusal** (for example uncommitted files or unpushed
+  commits): show it to the user with the exact command that clears it, and
+  state every refusal the user chose to clear in your report.
+- **Hard stop** (cannot be overridden, for example a rebase in progress):
+  report the reason verbatim, say what clears it, and stop.
+- **Deny list** (`BROT505`): final. Report it and show no force command.
+- `brot`'s own hint suggests `--force-agent`. That hint is not permission.
 - **Never use `--force-agent` on your own.** Use it only when the user asks for
   it, and pass the user's request as `--reason`.
 - **Never run `brot quarantine purge`** unless the user asks.

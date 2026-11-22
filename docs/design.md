@@ -73,7 +73,11 @@ No `Stop` and no `UserPromptSubmit` hook on any harness (T3 `FR-HOOK-19`). `brot
 ### 3.2 Command text
 
 - **Claude Code and Codex:** `if command -v brot >/dev/null 2>&1; then brot hook <harness> <event>; fi`. When `brot` is missing, the hook exits 0 and prints nothing (DG-01). `brot doctor` recognises this form; a form such as `sh -c '…'` would show as `unknown` (T3 `FR-HOOK-9`).
-- **Muse:** the argument vector `["brot", "hook", "muse", "<event>"]`, with `timeoutMs` set. Muse does not expand variables in argv ([O]). A shell wrapper would hide the command from `brot doctor`. Muse's behaviour when the program is missing is [U] and is checked in §8.
+- **Muse:** the argument vector `["brot", "hook", "muse", "<event>"]`, with `timeoutMs` set. Observed on Muse 1.4.25 with `muse plugins hook test` in a throwaway Muse home ([O]):
+  - Muse finds `brot` on `PATH`, and the hook completes with exit 0.
+  - With `brot` missing, the hook ends `failed` with "No such file or directory", and Muse does not block the tool call (`should_block: false`). Muse has no shell guard, so this is the v1 behaviour for DG-01. Whether Muse shows the failure to the user in a live session is [U].
+  - Muse treats any argv element that contains `/` as a file inside the plugin, so `sh -c '… >/dev/null …'` fails validation. It does not expand variables in argv either.
+  - Muse passes hooks a fixed set of environment variables (`HOME`, `PATH`, `USER`, `SHELL`, `TERM`, `TMPDIR`, `LANG`, `LOGNAME` and the plugin variables). `BROT_DB`, `BROT_CONFIG` and every `XDG_*` variable are dropped, so `brot` under Muse always uses its default paths under `HOME`. That was `hook test`; whether a live session passes more, including `MUSE_SESSION_ID`, is [U] (§10).
 - **No hook names a plugin path or a bundled script.** Codex asks for a new review when a bundled script changes, even if the hook definition stays the same ([D]).
 
 ### 3.3 Keeping the hook text unchanged (HC-06a)
@@ -96,13 +100,14 @@ Unverified: whether a version bump with unchanged hook text really keeps the app
 ## 4. OpenCode module (HC-05, HC-12)
 
 - **API:** targets the V2 API only: `export default Plugin.define({ id: "brot", setup(ctx) { … } })` ([D]).
-- **Session ID in shells (`FR-HOOK-4`):** sets `BROT_SESSION=opencode:<id>` through `ctx.shell.hook("create.before", e => { e.env.BROT_SESSION = … })` ([D]). This replaces the command prefix in HC-12, so the command the agent runs stays exactly as typed. The change must be confirmed against T3's contract (§9 D-3).
+- **Session ID in shells (`FR-HOOK-4`):** the module injects nothing. OpenCode 2.3.0 sets `OPENCODE_SESSION_ID` in the agent shell, and `brot` resolves it (T3 contract). v1 therefore requires OpenCode 2.3.0 or later. This departs from HC-12, which asks for the `BROT_SESSION=opencode:<id> ` prefix; see §9 D-3.
 - **Mappings (HC-12):**
   - a root session's first event becomes `session-created`;
   - `session.deleted` and an interrupted execution become a session end;
   - `session.idle` is not an end;
   - child sessions start through `session.created` carrying `parentID`.
-- **Calls:** `Bun.spawn(["brot", "hook", "opencode", event])`, one of the forms `brot doctor` recognises. The JSON payload goes on stdin. The module awaits the call only for `session-created`, where it reads the printed context. Every other call runs without waiting, so the agent is never blocked.
+- **Calls:** `Bun.spawn(["brot", "hook", "opencode", event])`, written as that literal array because `brot doctor` recognises only literal forms. Without Bun it uses `node:child_process`. The JSON payload goes on stdin. The module awaits the call only for a root `session-created` and for `session-forked`, the two events where `brot` prints context. Every other call runs without waiting, so the agent is never blocked.
+- **Context:** the printed `{"context": …}` text is added once, to that session's next model request, through `ctx.session.hook("context")`. The module reads the session from the hook's `sessionID` field. The docs do not list that field, so context injection is [U] until a live run (§8).
 - **Guard (DG-01):** a failed spawn is caught and dropped. It is never thrown into OpenCode.
 - **Install:** copy or symlink the module into `~/.config/opencode/plugins/` (OQ-06). The skill is found through `~/.claude/skills` or `~/.agents/skills` ([D]). Whether OpenCode 2.3.0 honours `.agents/skills` is [U].
 
@@ -146,9 +151,12 @@ The skill never uses `--force-agent` unless the user asks for it, and then passe
 
 Each check runs in a throwaway harness home (`CODEX_HOME`, the Muse `XDG_*` variables, a temporary Claude config). None touches the user's live configuration.
 
-1. Install the plugin from a local marketplace on each harness, and confirm the hooks fire, using `brot doctor` with a throwaway `BROT_DB`.
+1. Install the plugin from a local marketplace on each harness, and confirm the hooks fire, using `brot doctor` with a throwaway `BROT_DB`. Done so far (2026-11-22, [O]):
+   - Muse: installed and approved in a throwaway Muse home. Its `post-tool-use` hook ran `brot` through `muse plugins hook test`.
+   - OpenCode: the module ran against the real `brot` with a captured payload. `brot doctor` reported it `declared` and `firing` from a throwaway OpenCode config directory.
+   - Claude Code and Codex: not yet run.
 2. On Codex and Muse, approve the hooks. Bump only the plugin version, reinstall, and confirm the hooks still run without a new approval. This tests the HC-06a premise.
-3. Run Muse with `brot` missing from `PATH`, and confirm the session is not blocked.
+3. ~~Run Muse with `brot` missing~~ Done: the hook fails and does not block (§3.2).
 4. ~~Measure Muse `pre-tool` latency~~ Done 2026-11-22: 8.9 ms p95 (D-2).
 
 ## 9. Open design decisions
@@ -157,10 +165,12 @@ Each check runs in a throwaway harness home (`CODEX_HOME`, the Muse `XDG_*` vari
 |---|---|---|---|
 | D-1 | How does the Codex manifest get its `hooks` key? harness-kit 0.4.0 cannot write it, and `plugin.meta.toml` rejects unknown keys | A: add an optional `codex_hooks` path to harness-kit (a separate PR in that repo), then generate. B: set `codex = false` and hand-maintain `.codex-plugin/plugin.json` | **A**. It keeps DS-04's one-change version bump, and other plugins with Codex hooks will need it too |
 | D-2 | Muse rejects `matcher`, so a Muse `pre-tool` hook runs `brot` on every tool call | A: declare it. B: leave it out until Muse supports matchers | **Decided on evidence: A.** `brot hook muse pre-tool` measured 7.7 ms p50 and 8.9 ms p95 over 60 runs (2026-11-22, brot 0.8.2), far inside the 100 ms p95 budget of T3 `FR-HOOK-7` |
-| D-3 | OpenCode session ID for `brot` commands the agent runs (HC-12, T3 `FR-HOOK-4`) | A: inject `BROT_SESSION` as env (§4). B: prefix the command, as the requirements say. C: inject nothing, because OpenCode 2.3.0 already sets `OPENCODE_SESSION_ID` in the agent shell and `brot` resolves it (T3 §10.2) | **C for OpenCode 2.3.0 and later, with A as the fallback for older versions**. It leaves the agent's command unchanged and adds no code on the tool path |
+| D-3 | OpenCode session ID for `brot` commands the agent runs (HC-12, T3 `FR-HOOK-4`) | A: inject `BROT_SESSION` as env. B: prefix the command, as HC-12 says. C: inject nothing and require OpenCode 2.3.0 or later, which sets `OPENCODE_SESSION_ID` itself | **C (built).** It leaves the agent's command unchanged. It departs from HC-12, so it needs the owner's approval; B can be added later without changing any other hook |
 
 ## 10. Notes for T3 (`brot`)
 
 - Codex 0.171.0 has no `PostToolUseFailure`. T3's hook contract lists it for Codex.
 - An OpenCode module can set shell env through `shell.hook("create.before")` (D-3).
+- Muse plugin hooks receive a fixed environment in `muse plugins hook test` (§3.2), without `MUSE_SESSION_ID`. T3's contract reads `MUSE_SESSION_ID` in the hook to link a Muse subagent to its parent. If live plugin hooks drop it too, Muse subagent links fail. T3's capture used settings-style hooks, which did receive it.
+- Under Muse, `BROT_DB` and `XDG_*` never reach `brot hook` (§3.2), so a throwaway database cannot be used in a live Muse test.
 - Claude Code's `WorktreeCreate` hook fires for harness-native worktrees. It is a possible source for registering those worktrees (T3's call).

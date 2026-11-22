@@ -24,8 +24,10 @@ jobs:
       - name: Hook tests
         # The replay layer needs brot and its fixtures; it is skipped here and
         # run locally with BROT_FIXTURES set.
+        # Stability is checked on pull requests only: after a PR labelled
+        # hook-change merges, main differs from the last tag until the release.
         env:
-          HOOK_CHANGE_FLAGGED: ${{ contains(github.event.pull_request.labels.*.name, 'hook-change') && '1' || '' }}
+          HOOK_CHANGE_FLAGGED: ${{ (github.event_name != 'pull_request' || contains(github.event.pull_request.labels.*.name, 'hook-change')) && '1' || '' }}
         run: python3 -I tests/hooks.py
       - name: OpenCode module tests
         run: node --test tests/opencode.test.mjs

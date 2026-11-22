@@ -2,17 +2,19 @@
 
 ## What the hooks register on their own
 
-When the plugin's hooks run, `brot` registers, from each shell command or file
-write:
+When the plugin's hooks run, `brot` registers, from each shell command:
 
 - worktrees (`git worktree add`);
 - branches (`git checkout -b`, `git switch -c`, `git branch <name>`);
-- pull requests (`gh pr create`);
-- new files the agent writes.
+- pull requests (`gh pr create`).
 
-Each one is marked "needs validation" until someone confirms it
-(`brot object validate <obj>`). A hook cannot tell whether a command
-succeeded on every harness, so a failed command may still register an object.
+New files register automatically only on Claude Code (its `Write` tool). Muse
+and OpenCode file writes, and Codex `apply_patch`, register nothing: register
+those files by hand when they matter.
+
+A hook registration is marked "needs validation" until someone confirms it
+(`brot object validate <obj>`). Codex reports no exit status, so a failed
+command there may still register an object.
 
 ## Registering by hand
 
