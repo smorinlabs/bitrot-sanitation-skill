@@ -149,14 +149,14 @@ Each check runs in a throwaway harness home (`CODEX_HOME`, the Muse `XDG_*` vari
 1. Install the plugin from a local marketplace on each harness, and confirm the hooks fire, using `brot doctor` with a throwaway `BROT_DB`.
 2. On Codex and Muse, approve the hooks. Bump only the plugin version, reinstall, and confirm the hooks still run without a new approval. This tests the HC-06a premise.
 3. Run Muse with `brot` missing from `PATH`, and confirm the session is not blocked.
-4. Measure Muse `pre-tool` latency per tool call against T3 `FR-HOOK-7` (100 ms p95). This feeds D-2.
+4. ~~Measure Muse `pre-tool` latency~~ Done 2026-11-22: 8.9 ms p95 (D-2).
 
 ## 9. Open design decisions
 
 | ID | Question | Options | Recommendation |
 |---|---|---|---|
 | D-1 | How does the Codex manifest get its `hooks` key? harness-kit 0.4.0 cannot write it, and `plugin.meta.toml` rejects unknown keys | A: add an optional `codex_hooks` path to harness-kit (a separate PR in that repo), then generate. B: set `codex = false` and hand-maintain `.codex-plugin/plugin.json` | **A**. It keeps DS-04's one-change version bump, and other plugins with Codex hooks will need it too |
-| D-2 | Muse rejects `matcher`, so a Muse `pre-tool` hook would run `brot` on every tool call | A: declare it anyway, if the measured cost (§8.4) fits the 100 ms p95 budget. B: leave Muse `pre-tool` out until Muse supports matchers, and record the gap under HC-07a | **A if the measurement fits, else B**. Adding it later changes the hook set, which needs a re-approval (DS-05) |
+| D-2 | Muse rejects `matcher`, so a Muse `pre-tool` hook runs `brot` on every tool call | A: declare it. B: leave it out until Muse supports matchers | **Decided on evidence: A.** `brot hook muse pre-tool` measured 7.7 ms p50 and 8.9 ms p95 over 60 runs (2026-11-22, brot 0.8.2), far inside the 100 ms p95 budget of T3 `FR-HOOK-7` |
 | D-3 | OpenCode session ID for `brot` commands the agent runs (HC-12, T3 `FR-HOOK-4`) | A: inject `BROT_SESSION` as env (§4). B: prefix the command, as the requirements say. C: inject nothing, because OpenCode 2.3.0 already sets `OPENCODE_SESSION_ID` in the agent shell and `brot` resolves it (T3 §10.2) | **C for OpenCode 2.3.0 and later, with A as the fallback for older versions**. It leaves the agent's command unchanged and adds no code on the tool path |
 
 ## 10. Notes for T3 (`brot`)

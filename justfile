@@ -9,5 +9,6 @@ gen-check:
 # hook text, missing-brot guard, and (with BROT_FIXTURES) shim replay
 test:
     python3 -I tests/hooks.py
+    node --test tests/opencode.test.mjs
 
 all: gen-check test

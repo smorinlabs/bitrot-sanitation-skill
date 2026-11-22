@@ -28,7 +28,13 @@ EXPECTED = {
               "PreToolUse": "pre-tool", "PostToolUse": "post-tool-use",
               "SubagentStart": "subagent-start", "SubagentStop": "subagent-stop",
               "PostCompact": "post-compact"},
+    "muse": {"SessionStart": "session-start", "SessionEnd": "session-end",
+             "PreToolUse": "pre-tool", "PostToolUse": "post-tool-use",
+             "PostToolUseFailure": "post-tool-use-failure",
+             "SubagentStart": "subagent-start", "SubagentStop": "subagent-stop",
+             "PostCompact": "post-compact"},
 }
+MUSE = PLUGIN / ".muse-plugin" / "plugin.json"
 failures = []
 
 def fail(msg):
@@ -36,12 +42,16 @@ def fail(msg):
     print("FAIL", msg)
 
 def commands(harness):
+    """Native event -> argv to run. Shell commands run through /bin/sh."""
+    if harness == "muse":
+        hooks = json.loads(MUSE.read_text())["capabilities"]["hooks"]
+        return {h["event"]: h["command"] for h in hooks}
     data = json.loads(FILES[harness].read_text())
     out = {}
     for event, groups in data["hooks"].items():
         for g in groups:
             for h in g["hooks"]:
-                out[event] = h["command"]
+                out[event] = ["/bin/sh", "-c", h["command"]]
     return out
 
 def test_text():
@@ -49,22 +59,28 @@ def test_text():
         got = commands(harness)
         if set(got) != set(want):
             fail(f"{harness}: events {sorted(got)} != {sorted(want)}")
-        for event, cmd in got.items():
+        for event, argv in got.items():
+            if harness == "muse":
+                want_argv = ["brot", "hook", "muse", want.get(event)]
+                if argv != want_argv:
+                    fail(f"muse {event}: argv {argv}, want {want_argv}")
+                continue
+            cmd = argv[2]
             m = GUARD.match(cmd)
             if not m:
                 fail(f"{harness} {event}: command not in the guarded form: {cmd!r}")
             elif m.groups() != (harness, want.get(event)):
                 fail(f"{harness} {event}: names {m.groups()}, want {(harness, want.get(event))}")
-    print("ok   text")
+    print("ok   text" if not failures else "done text")
 
 def test_missing_brot():
     env = {"PATH": "/usr/bin:/bin", "HOME": tempfile.mkdtemp()}
-    for harness in EXPECTED:
-        for event, cmd in commands(harness).items():
-            p = subprocess.run(["/bin/sh", "-c", cmd], input=b"{}", env=env, capture_output=True)
+    for harness in ("claude-code", "codex"):  # Muse runs argv: no shell guard (design §3.2)
+        for event, argv in commands(harness).items():
+            p = subprocess.run(argv, input=b"{}", env=env, capture_output=True)
             if p.returncode != 0 or p.stdout or p.stderr:
                 fail(f"{harness} {event}: without brot exit={p.returncode} out={p.stdout!r} err={p.stderr!r}")
-    print("ok   missing brot")
+    print("ok   missing brot" if not failures else "done missing brot")
 
 def test_stability():
     tags = subprocess.run(["git", "-C", str(ROOT), "tag", "--list", "v*", "--sort=-v:refname"],
@@ -87,7 +103,7 @@ def test_stability():
                 fail(f"{rel}: hooks changed since {tags[0]}")
         elif cur != old.stdout:
             fail(f"{rel}: changed since {tags[0]}")
-    print("ok   stability")
+    print("ok   stability" if not failures else "done stability")
 
 def test_replay():
     fixtures = os.environ.get("BROT_FIXTURES")
@@ -112,7 +128,7 @@ def test_replay():
             event = fx.name.split(".")[0]
             if event not in cmds:
                 continue  # an event the plugin does not declare
-            p = subprocess.run(["/bin/sh", "-c", cmds[event]], input=fx.read_bytes(),
+            p = subprocess.run(cmds[event], input=fx.read_bytes(),
                                env=env, capture_output=True)
             con = sqlite3.connect(db)
             row = con.execute("SELECT harness, event, outcome FROM hook_events ORDER BY id DESC LIMIT 1").fetchone()
@@ -127,6 +143,14 @@ def test_replay():
             n += 1
     print(f"ok   replay ({n} payloads)")
 
-for t in (test_text, test_missing_brot, test_stability, test_replay):
+def test_versions():
+    meta = re.search(r'^version = "([^"]+)"', (PLUGIN / "plugin.meta.toml").read_text(), re.M).group(1)
+    for f in (MUSE, PLUGIN / ".claude-plugin" / "plugin.json", PLUGIN / ".codex-plugin" / "plugin.json"):
+        v = json.loads(f.read_text()).get("version")
+        if v != meta:
+            fail(f"{f.relative_to(ROOT)}: version {v}, plugin.meta.toml has {meta}")
+    print("ok   versions" if not failures else "done versions")
+
+for t in (test_text, test_versions, test_missing_brot, test_stability, test_replay):
     t()
 sys.exit(1 if failures else 0)
