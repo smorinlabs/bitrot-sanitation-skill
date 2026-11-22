@@ -43,9 +43,10 @@ claude plugin install brot@bitrot-sanitation-skill
 
 ## Codex
 
-> **Not ready yet.** The generated Codex manifest does not yet point at
-> `hooks/codex-hooks.json` (design D-1), so Codex would load the Claude Code
-> hook file. Do not install on Codex until this note is removed.
+> **Not yet tested in a live Codex session.** The Codex manifest points Codex
+> at `hooks/codex-hooks.json` (harness-kit `codex_hooks`), and an install into a
+> throwaway Codex home carried that entry. Please report what `brot doctor`
+> shows after your first session.
 
 ```sh
 codex plugin marketplace add smorinlabs/bitrot-sanitation-skill

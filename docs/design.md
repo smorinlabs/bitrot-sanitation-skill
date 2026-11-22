@@ -155,7 +155,7 @@ Each check runs in a throwaway harness home (`CODEX_HOME`, the Muse `XDG_*` vari
    - Muse: installed and approved in a throwaway Muse home. Its `post-tool-use` hook ran `brot` through `muse plugins hook test`.
    - OpenCode: the module ran against the real `brot` with a captured payload. `brot doctor` reported it `declared` and `firing` from a throwaway OpenCode config directory.
    - Claude Code 2.1.330: one headless session with `--plugin-dir` and a throwaway `BROT_DB` ran `git worktree add`. `brot` recorded `session-start` (ok), `pre-tool` (ignored), `post-tool-use` (ok) and `session-end` (ok), with plugin version `0.0.0`, and registered the worktree and its branch as hook registrations needing validation.
-   - Codex: not run. The Codex manifest has no `hooks` key until D-1 is settled, and a throwaway `CODEX_HOME` has no login.
+   - Codex 0.171.0: `codex plugin add` into a throwaway `CODEX_HOME` installed a manifest whose `hooks` entry is `./hooks/codex-hooks.json`. No session was run: a throwaway `CODEX_HOME` has no login.
 2. On Codex and Muse, approve the hooks. Bump only the plugin version, reinstall, and confirm the hooks still run without a new approval. This tests the HC-06a premise.
 3. ~~Run Muse with `brot` missing~~ Done: the hook fails and does not block (§3.2).
 4. ~~Measure Muse `pre-tool` latency~~ Done 2026-11-22: 8.9 ms p95 (D-2).
@@ -164,7 +164,7 @@ Each check runs in a throwaway harness home (`CODEX_HOME`, the Muse `XDG_*` vari
 
 | ID | Question | Options | Recommendation |
 |---|---|---|---|
-| D-1 | How does the Codex manifest get its `hooks` key? harness-kit 0.4.0 cannot write it, and `plugin.meta.toml` rejects unknown keys | A: add an optional `codex_hooks` path to harness-kit (a separate PR in that repo), then generate. B: set `codex = false` and hand-maintain `.codex-plugin/plugin.json` | **Decided 2026-11-22 (owner): A.** Until the harness-kit release lands, the plugin is not installable on Codex (README) |
+| D-1 | How does the Codex manifest get its `hooks` key? harness-kit 0.4.0 cannot write it, and `plugin.meta.toml` rejects unknown keys | A: add an optional `codex_hooks` path to harness-kit (a separate PR in that repo), then generate. B: set `codex = false` and hand-maintain `.codex-plugin/plugin.json` | **Decided 2026-11-22 (owner): A.** Shipped in harness-kit v0.5.0 (`codex_hooks`); `plugin.meta.toml` sets `codex_hooks = "./hooks/codex-hooks.json"` |
 | D-2 | Muse rejects `matcher`, so a Muse `pre-tool` hook runs `brot` on every tool call | A: declare it. B: leave it out until Muse supports matchers | **Decided on evidence: A.** `brot hook muse pre-tool` measured 7.7 ms p50 and 8.9 ms p95 over 60 runs (2026-11-22, brot 0.8.2), far inside the 100 ms p95 budget of T3 `FR-HOOK-7` |
 | D-3 | OpenCode session ID for `brot` commands the agent runs (HC-12, T3 `FR-HOOK-4`) | A: inject `BROT_SESSION` as env. B: prefix the command, as HC-12 says. C: inject nothing and require OpenCode 2.3.0 or later, which sets `OPENCODE_SESSION_ID` itself | **Decided 2026-11-22 (owner): C.** v1 requires OpenCode 2.3.0 or later. The prefix can be added later without changing any other hook |
 
