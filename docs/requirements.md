@@ -1,6 +1,6 @@
 # T4 — `bitrot-sanitation-skill`: requirements
 
-**Status:** requirements phase, draft 3. Written 2026-11-12. All owner decisions OQ-01 to OQ-12 recorded 2026-11-12; OQ-13 is research for the design phase. Reconciled with T3's final requirements (2026-11-12 15:27) in §7.4; four conflicts with T3 remain open there.
+**Status:** requirements phase, draft 3. Written 2026-11-12. All owner decisions OQ-01 to OQ-12 recorded 2026-11-12; OQ-13 is research for the design phase. Reconciled with T3's final requirements (2026-11-12 15:27) in §7.4; the four conflicts with T3 (C-1 to C-4) and OQ-15 (f) were decided 2026-11-16.
 **Location:** `docs/requirements.md` in `smorinlabs/bitrot-sanitation-skill`. Local paths, private tool names, and machine-specific details were removed before publishing (CV-09).
 **Brief:** task brief T4, kept outside this repo.
 
@@ -91,7 +91,7 @@ These facts shape the requirements in section 3. They are **not** the hooks gap 
 - **HC-07** — The set of hook events wired per harness MUST come from T3's hooks gap table (`T3:hooks`). For each harness the repo MUST record which `brot` needs it covers: session start, session end, tool use that creates an object, tool use that deletes something, and subagent or fork start. The gap table MUST also record two capabilities per harness, because SL-04 and OQ-03 depend on them:
   - whether a hook's output reaches the model's context (needed for the session-start summary);
   - whether a pre-tool-use hook can add a warning, deny the call, or neither (required: the v1 pre-tool hook in HC-07a must be able to enforce later without a definition change).
-- **HC-07a** — **Pre-tool hook ships in v1 with the guard off** (X2 decided B, 2026-11-12). Each harness MUST get a pre-tool-use hook limited to shell commands (matcher `Bash` or the harness equivalent) that calls `brot hook <harness> pre-tool`. In v1 `brot` passes every command through unchanged: no warning, no block. A later `brot` release can turn on the guard (T3 `FR-HOOK-16`) without changing the hook text (HC-06a), so no user re-approves anything. The hook MUST stay within T3's tool-path budget (`FR-HOOK-7`, 100 ms p95). *Contingent on C-1 (§7.4.3): T3 final does not yet support this.*
+- **HC-07a** — **Pre-tool hook ships in v1 with the guard off** (X2 decided B, 2026-11-12). Each harness MUST get a pre-tool-use hook limited to shell commands (matcher `Bash` or the harness equivalent) that calls `brot hook <harness> pre-tool`. In v1 `brot` passes every command through unchanged: no warning, no block. A later `brot` release can turn on the guard (T3 `FR-HOOK-16`) without changing the hook text (HC-06a), so no user re-approves anything. The hook MUST stay within T3's tool-path budget (`FR-HOOK-7`, 100 ms p95). *C-1 decided B and resolved (§7.4.3): T3's design accepts `brot hook <harness> pre-tool` as an ignored event.*
 - **HC-08** — Where T3's gap table marks an event as **missing** for a harness, the plugin MUST name the fallback, in this order of preference:
   1. **Build the hook.** T3's brief says missing hooks "will be created from scratch". For OpenCode a built hook is code in the plugin module (E14). A built hook ships in this plugin, not in `brot` (OQ-11).
   2. A skill-driven manual step (SK, SL).
@@ -127,7 +127,7 @@ These facts shape the requirements in section 3. They are **not** the hooks gap 
 - **SK-10** — Before any destructive step, the agent MUST read `brot`'s plan for it, including the risk information for every step (DEP-15). What happens next depends on the cleanup policy in force (SK-17). The agent MUST NOT skip a confirmation the policy requires.
 - **SK-11** — `brot` classifies each failed check as either a **soft risk** or a **hard stop** (DEP-15).
   - **Soft risk:** the agent weighs it and proceeds or not, as the policy allows (SK-17). The agent MUST state each soft risk it accepted in its report.
-  - **Hard stop:** the agent MUST report the reason verbatim and stop. A hard stop can be passed only with `brot`'s explicit force override. `brot` offers two overrides (T3 `FR-DEL-9`): `--force`, which needs a human at an interactive terminal, and `--force-agent --reason <text>`, which an agent can use. Whether the skill lets an agent use `--force-agent` on its own is design question OQ-15 (f). Until that is decided, the agent MUST NOT use `--force-agent` unless the user explicitly asks, and MUST pass the user's request as the `--reason`.
+  - **Hard stop:** the agent MUST report the reason verbatim and stop. A hard stop can be passed only with `brot`'s explicit force override. `brot` offers two overrides (T3 `FR-DEL-9`): `--force`, which needs a human at an interactive terminal, and `--force-agent --reason <text>`, which an agent can use. The skill does not let an agent use `--force-agent` on its own (OQ-15 (f), decided 2026-11-16). The agent MUST NOT use it unless the user explicitly asks, and MUST pass the user's request as the `--reason`.
 
 **Cleanup**
 
@@ -139,7 +139,7 @@ These facts shape the requirements in section 3. They are **not** the hooks gap 
 
 **Cleanup policy (OQ-14, decided 2026-11-12)**
 
-- **SK-17** — **Configurable cleanup policy.** A human chooses how much autonomy agents have for cleanup. The policy is stored in `brot` (DEP-14), and the skill MUST read and follow it, never assume it. The policy MUST cover at least this spectrum: *Contingent on C-2 (§7.4.3): T3 final does not yet support this.*
+- **SK-17** — **Configurable cleanup policy.** A human chooses how much autonomy agents have for cleanup. The policy is stored in `brot` (DEP-14), and the skill MUST read and follow it, never assume it. The policy MUST cover at least this spectrum: *C-2 decided B (§7.4.3): kept, but `brot` stores no policy until T3 reopens D-3 in a later phase.*
 
   | Mode | Behaviour |
   |---|---|
@@ -150,10 +150,10 @@ These facts shape the requirements in section 3. They are **not** the hooks gap 
   | `direct` | The agent still reads the plan and its risk information (SK-10), then deletes without waiting for any confirmation. It still states every soft risk it accepted (SK-11, SK-20). Hard stops still apply and need a force override (SK-11). |
 
   Mode names are illustrative; the design phase fixes them.
-- **SK-18** — **Default policy.** The owner's default is `auto`: agents make the full decision with all risk information. The shipped default for other users is open, design question OQ-15 (a). *Contingent on C-2 (§7.4.3): T3 final does not yet support this.*
+- **SK-18** — **Default policy.** The owner's default is `auto`: agents make the full decision with all risk information. The shipped default for other users is open, design question OQ-15 (a). *C-2 decided B (§7.4.3): kept, but `brot` stores no policy until T3 reopens D-3 in a later phase.*
 - **SK-19** — **Review risks, then force-delete one object.** A human MUST be able to see the warnings and risks `brot` reports for deleting one object (the soft risks and hard stops from DEP-15), and then run a single command that force-deletes that object anyway, choosing the deletion mode: hard, or one of the soft-delete modes in SK-21. The skill MUST show the exact force command alongside the risks, so the human can copy and run it. This applies only to refusals a force flag can override: type-check and sanity-pass refusals (T3 `FR-DEL-9`). A deny-list refusal (T3 `FR-DEL-3`) is absolute; the skill MUST report it as final and MUST NOT show a force command for it. Forcing is an explicit human choice; SK-11 still governs whether an agent may apply force on its own (OQ-15 (f)). (Owner's clarification, 2026-11-12: "I can see warnings and risks of deleting an object, then go ahead with a command that will force delete it.")
 - **SK-20** — **Report every autonomous cleanup.** In `auto`, `auto-low-risk`, and `direct` modes, the agent MUST report each cleanup it performed, with the exact objects and any soft risks it accepted. Reports go into the session and into `brot`'s history (T3 `FR-OBJ-11`).
-- **SK-21** — **Soft-delete modes** (owner request, 2026-11-12). A delete, forced or not, MUST let the human choose a deletion mode, including several kinds of soft (reversible) delete. The skill MUST show the modes available for the object next to its risks, each with its exact command. Proposed modes by object type (the design phase fixes the set): *Contingent on C-4 (§7.4.3): T3 final does not yet support this.*
+- **SK-21** — **Soft-delete modes** (owner request, 2026-11-12). A delete, forced or not, MUST let the human choose a deletion mode, including several kinds of soft (reversible) delete. The skill MUST show the modes available for the object next to its risks, each with its exact command. Proposed modes by object type (the design phase fixes the set): *C-4 decided B (§7.4.3): kept. T3's design already pins every removed local branch and worktree HEAD under `refs/brot/backup/`; the selectable modes wait until T3 reopens D-4 in a later phase.*
 
   | Object | Soft modes | Hard mode |
   |---|---|---|
@@ -164,7 +164,7 @@ These facts shape the requirements in section 3. They are **not** the hooks gap 
   | cloud resource | none in v1: `brot` tracks cloud resources and prints their delete command but never runs it (T3 D-13) | the printed delete command (SK-12) |
 
 - **SK-22** — **Restore.** Every soft delete MUST print the command that restores the object, and the skill MUST include it in its report (SK-20).
-- **SK-23** — **Default mode is configurable.** When no mode is given, a forced delete uses the object type's soft mode, so it stays reversible unless `--mode hard` is given (OQ-15 (i), decided 2026-11-12). An object type with no soft mode (cloud resources in v1, SK-21) has no reversible default: the skill MUST state that the delete cannot be undone and MUST NOT describe it as reversible. The default mode MUST be configurable per object type in a user-level config and a project-level config, with the project level winning (DEP-16). The skill MUST read the effective default from `brot`, never assume it. *Contingent on C-3 (§7.4.3): T3 final does not yet support this.*
+- **SK-23** — **Default mode is configurable.** When no mode is given, a forced delete uses the object type's soft mode, so it stays reversible unless `--mode hard` is given (OQ-15 (i), decided 2026-11-12). An object type with no soft mode (cloud resources in v1, SK-21) has no reversible default: the skill MUST state that the delete cannot be undone and MUST NOT describe it as reversible. The default mode MUST be configurable per object type in a user-level config and a project-level config, with the project level winning (DEP-16). The skill MUST read the effective default from `brot`, never assume it. *C-3 decided B and resolved (§7.4.3): T3's project config layer sets the default mode per object type, limited to `quarantine` or `trash`.*
 - **SK-24** — **Manual purge.** Quarantined and archived items MUST be kept until a human purges them; nothing expires automatically (OQ-15 (j), decided 2026-11-12). The skill MUST NOT purge unless the user asks, and the end report (SL-07) SHOULD mention how many soft-deleted items are waiting to be purged.
 
 ### 3.3 Session lifecycle (SL)
@@ -253,9 +253,9 @@ These are what the plugin needs from `brot`. They are listed so T3 can confirm o
 | DEP-11 | In the hooks gap table, per harness: does hook output reach the model's context? | SL-04 |
 | DEP-12 | In the hooks gap table, per harness: can a pre-tool-use hook warn, deny, or neither? Required (HC-07a). T3 gap table C3: ✅ on all four harnesses. | HC-07a |
 | DEP-13 | A record of hook events received per session (event name and time), and a query for it, for example "did session `<id>` receive a start event?" and "was `<locator>` registered as inferred?". | DG-06 |
-| DEP-14 | *Contingent on C-2 (§7.4.3).* A stored cleanup policy (SK-17) that the skill can query, and that `brot` itself enforces on its delete commands. T3's `Q-AUTH` is answered by this: configurable, not fixed. | SK-17, SK-18 |
+| DEP-14 | *C-2 decided B: waits until T3 reopens D-3 (§7.4.3).* A stored cleanup policy (SK-17) that the skill can query, and that `brot` itself enforces on its delete commands. T3's `Q-AUTH` is answered by this: configurable, not fixed. | SK-17, SK-18 |
 | DEP-15 | Plans with per-step risk information: each check is classed as soft risk or hard stop, and steps are classed low risk or not. A per-object risk view (`brot` shows every warning and risk for deleting one object) and a force-delete command for that one object, which passes hard stops only when force is given explicitly. | SK-10, SK-11, SK-19 |
-| DEP-16 | *Contingent on C-3, C-4 (§7.4.3).* Deletion modes per object type (SK-21), selectable on every delete including forced ones; `brot restore <id>`; a manual purge command with no automatic expiry (SK-24); a default mode per object type, configurable at user and project level, with the project level winning (SK-23). | SK-19, SK-21 to SK-24 |
+| DEP-16 | *C-3 resolved; C-4 waits until T3 reopens D-4 (§7.4.3).* Deletion modes per object type (SK-21), selectable on every delete including forced ones; `brot restore <id>`; a manual purge command with no automatic expiry (SK-24); a default mode per object type, configurable at user and project level, with the project level winning (SK-23). | SK-19, SK-21 to SK-24 |
 
 ## 5. Out of scope
 
@@ -267,7 +267,7 @@ These are what the plugin needs from `brot`. They are listed so T3 can confirm o
 
 ## 6. Open questions (decision requests)
 
-Each question gives the reason it is needed, the options with their effects, and a recommendation. The owner decides. **Some decisions below conflict with T3's final requirements.** Conflicts C-1 to C-4 in §7.4.3 list them, and OQ-15 (f) is reopened.
+Each question gives the reason it is needed, the options with their effects, and a recommendation. The owner decides. **Some decisions below conflicted with T3's final requirements.** Conflicts C-1 to C-4 in §7.4.3 list them. They and OQ-15 (f) were decided 2026-11-16.
 
 ### OQ-01 — Who installs the hooks? — **DECIDED 2026-11-12: A** (the plugin ships thin-shim hooks; `brot` does not write harness config)
 **Why:** T3's brief says "the CLI and skill orchestrate registration via harness hooks", which leaves the owner of hook installation undecided. The answer reshapes HC-03 to HC-06 and DS-07.
@@ -390,7 +390,7 @@ The owner asked for this part to be planned in more detail. These questions are 
 - **(c)** What makes a step "low risk", and who defines it: `brot` defaults, user configuration, or both.
 - **(d)** Which failed checks are hard stops and which are soft risks.
 - **(e)** ~~Confirm SK-19's reading.~~ **Resolved 2026-11-12:** the owner views one object's warnings and risks, then runs a force-delete command for it (SK-19). Plan editing (striking steps) is not a requirement.
-- **(f)** Whether an agent may apply force on its own. **Reopened 2026-11-12 by T3 D-15:** T3 added `--force-agent --reason <text>`, which overrides type-check and sanity refusals without a terminal; neither flag overrides the deny list. `brot` therefore allows agent force, and the open question is whether the skill does. Options: never without a user request (current SK-11 rule); allowed in `auto` and `direct` policies with the reason reported (SK-20); or allowed in every policy. Research item kept: whether a command run through the harness (for example Claude Code's `!` prefix) counts as an interactive terminal for `--force`.
+- **(f)** ~~Whether an agent may apply force on its own.~~ **Decided 2026-11-16: never without a user request** (SK-11). Reopened 2026-11-12 by T3 D-15: T3 added `--force-agent --reason <text>`, which overrides type-check and sanity refusals without a terminal; neither flag overrides the deny list. `brot` therefore allows agent force, and the question was whether the skill does. The options not chosen were allowing it in `auto` and `direct` policies with the reason reported (SK-20), or in every policy. Research item kept: whether a command run through the harness (for example Claude Code's `!` prefix) counts as an interactive terminal for `--force`.
 - **(g)** Whether PRs and cloud resources follow the same policy as local objects, or always need confirmation.
 - **(h)** ~~Risk level and acknowledgement code on force.~~ **Decided 2026-11-12: no.** Force takes no risk level and no acknowledgement code; the human reviews the risks (SK-19) and chooses the mode (SK-21).
 - **(i)** ~~Default mode.~~ **Decided 2026-11-12: yes, configurable** (SK-23). Owner confirmed: the project level wins over the user level.
@@ -513,7 +513,7 @@ T3's status is now "Final — requirements complete". D-17 confirmed every row t
 | D-14 / `FR-HOOK-5`: no session variable and no terminal means `unattributed`, the lowest trust | Note for design: DG-06 should treat an `unattributed` registration from an agent shell as a sign that session attribution is broken. Design detail |
 | `FR-HOOK-19`: v1 hooks are `SessionStart`, `SessionEnd`, `PostToolUse` (+ `PostToolUseFailure`), `SubagentStart`/`SubagentStop`, `PostCompact`; no `Stop` hook | No edit needed: HC-07 takes its event list from T3's table. Note for design: `PostCompact` is the hook that should re-inject session-start context (SL-04) |
 
-#### 7.4.3 Conflicts still open
+#### 7.4.3 Conflicts (decided 2026-11-16: B for all four)
 T3 is final, so each conflict resolves one of two ways. The owner finalised T3 after asks A1 to A7 were raised, so Option A may be the intended outcome. Either T4 adopts T3's row, or the owner reopens that T3 row in the design phase.
 
 | ID | Conflict | Option A: adopt T3 | Option B: keep T4 and reopen T3 | Recommendation |
@@ -522,3 +522,12 @@ T3 is final, so each conflict resolves one of two ways. The owner finalised T3 a
 | C-2 | Configurable cleanup policy (OQ-14, SK-17, DEP-14) | v1 is `auto` only, D-3; the skill offers only skill-level confirmation | Reopen D-3: `brot` stores and enforces the policy | **B**, because the owner chose a configurable policy and a skill-only rule cannot stop a second agent that skips the skill |
 | C-3 | Project-level default delete mode (SK-23) | User-level and per-command only | Reopen `FR-DEL-10` to add a project level that wins | **B**, because it was an explicit owner decision (OQ-15 (i)) |
 | C-4 | Soft modes beyond files (SK-21) | T3 defines no archive mode for worktrees and no backup-ref mode for local branches; remote branches are restorable through the recorded SHA | Reopen D-4 to add worktree `archive`, branch `backup-ref`, and PR `close` | **B** for worktrees and local branches, which hold the unpushed work at most risk. PR `close` is already non-destructive |
+
+**Decision (owner, 2026-11-16): B for C-1 to C-4.** T4 keeps its requirements. Checked the same day against T3's `docs/design.md` §15, which had already answered two of the four:
+
+| ID | State in T3 | What remains |
+|---|---|---|
+| C-1 | **Resolved.** `brot hook <harness> pre-tool` is accepted as an `ignored` event (design §10.1), so the pass-through hook needs no T3 requirement change. `FR-HOOK-16` still holds, because `brot` acts on nothing pre-tool | Nothing. HC-07a ships as written |
+| C-2 | **Not adopted.** T3's design defers reopening D-3 to a later phase | T3 reopens D-3 so that `brot` stores and enforces the policy (DEP-14). Until then SK-17, SK-18, and DEP-14 cannot be met |
+| C-3 | **Resolved.** A project config may set `delete.mode` per object type to `quarantine` or `trash` (design §13, R5.1) | Nothing |
+| C-4 | **Partly met.** Every local branch and worktree HEAD that a clean removes is first pinned under `refs/brot/backup/` (design §6.2). The selectable modes are not adopted | T3 reopens D-4 to add worktree `archive`, branch `backup-ref`, and PR `close` as modes (SK-21) |
