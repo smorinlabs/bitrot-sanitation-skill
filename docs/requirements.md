@@ -203,7 +203,7 @@ These facts shape the requirements in section 3. They are **not** the hooks gap 
 
 ### 3.5 Distribution and versioning (DS)
 
-- **DS-01** — The plugin lives in the standalone repo `smorinlabs/bitrot-sanitation-skill` using the home-5 harness-kit layout, and is cross-listed in `smorinlabs-skills` by `github:` reference (OQ-02). The repo is public (OQ-12).
+- **DS-01** — The plugin lives in the standalone repo `smorinlabs/bitrot-sanitation-skill` using the home-5 harness-kit layout. The repo is its own marketplace, so users install from it directly. The repo is public (OQ-12). *Owner decision 2026-11-22: no cross-listing in `smorinlabs-skills`; a second catalog entry is one more thing to keep in sync (supersedes that part of OQ-02).*
 - **DS-02** — The plugin MUST use semantic versioning independent of `brot`'s version.
 - **DS-03** — The plugin MUST declare a compatible `brot` version range in one machine-readable place. Hooks and the skill MUST check it at runtime against `brot`'s reported version and capabilities (`DEP-08`).
 - **DS-04** — A release MUST bump the version in every manifest and catalog that carries one, in one change. Under home 5 that is `harness.toml` and `plugin.meta.toml`, followed by `harness-kit gen`. Under home 4b it is the Claude catalog, the Codex catalog, and the plugin manifest. In both cases the OpenCode package is included if one exists.

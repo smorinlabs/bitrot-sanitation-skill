@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "name": "brot",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Register what coding agents create with the brot CLI, and clean it up only through brot's checks.",
   "compat": {
     "manifestDir": ".muse-plugin"
