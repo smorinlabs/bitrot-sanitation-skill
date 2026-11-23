@@ -1,0 +1,5 @@
+{
+  "companyAnnouncements": [
+    "brot plugin and skill: teaches coding agents to register what they create (worktrees, branches, PRs, files, cloud resources) with the brot CLI and clean it up only through brot's checks. Skill: brot (plugins/brot/skills/brot). Dev: just gen, just test (BROT_FIXTURES=<brot checkout>/tests/fixtures/hooks for replay). See docs/design.md and RELEASE-NOTES.md."
+  ]
+}
