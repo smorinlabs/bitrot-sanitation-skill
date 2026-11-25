@@ -6,9 +6,11 @@ description: "Track what this session creates (worktrees, branches, PRs, files, 
 # brot
 
 `brot` is a per-machine registry of the objects coding agents create, with a
-cleanup command that checks before it deletes. Hooks register most objects
-automatically. This skill covers what the hooks cannot do: blockers, cleanup,
-the end report, and recovery when hooks are not running.
+cleanup command that checks before it deletes. Thin hooks
+(`brot hook <harness> <event>` across Claude Code, Codex, Muse, OpenCode, and
+Antigravity) register most objects automatically. This skill covers what the
+hooks cannot do: blockers, cleanup, the end report, and recovery when hooks are
+not running.
 
 > **NEVER DELETE A TRACKED OBJECT EXCEPT THROUGH `brot object clean`.** No raw
 > `rm`, `git worktree remove`, `git branch -D`, `gh pr close` or cloud delete

@@ -1,6 +1,7 @@
 # Marketplace identity, consumed by harness-kit to generate
-# .claude-plugin/marketplace.json (Claude Code) and
-# .agents/plugins/marketplace.json (Codex). Per-plugin metadata lives in
+# .claude-plugin/marketplace.json (Claude Code),
+# .agents/plugins/marketplace.json (Codex), and
+# .agents/plugins.json (Antigravity). Per-plugin metadata lives in
 # plugins/<name>/plugin.meta.toml.
 [marketplace]
 name = "bitrot-sanitation-skill"

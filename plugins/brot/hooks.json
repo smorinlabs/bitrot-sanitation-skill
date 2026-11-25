@@ -1,0 +1,27 @@
+{
+  "brot": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "if command -v brot >/dev/null 2>&1; then brot hook antigravity session-start; else printf '{}\\n'; fi"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "run_command|write_file|write_to_file",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v brot >/dev/null 2>&1; then brot hook antigravity post-tool-use; else printf '{}\\n'; fi"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "if command -v brot >/dev/null 2>&1; then brot hook antigravity stop; else printf '{}\\n'; fi"
+      }
+    ]
+  }
+}

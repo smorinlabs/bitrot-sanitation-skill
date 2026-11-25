@@ -5,11 +5,11 @@ they create, using the `brot` CLI.
 
 `brot` is a per-machine registry of the objects agents create: worktrees,
 branches, pull requests, files, and cloud resources. Its cleanup command checks
-before it deletes. This plugin connects `brot` to four coding agents:
+before it deletes. This plugin connects `brot` to five coding agents:
 
-- **Hooks** call `brot hook <harness> <event>` on session start and end, after
-  shell commands and file writes, and on subagent and compaction events.
-  `brot` registers what it recognises.
+- **Hooks** call `brot hook <harness> <event>` on session start and end (or turn
+  stop on Antigravity), after shell commands and file writes, and on subagent
+  and compaction events. `brot` registers what it recognises.
 - **The `brot` skill** teaches the agent to register what the hooks miss, record
   blockers, clean up only through `brot`, and write an end-of-session report.
 
@@ -19,8 +19,10 @@ before it deletes. This plugin connects `brot` to four coding agents:
 | Codex | `plugins/brot/hooks/codex-hooks.json` and the skill | Trust each hook in `/hooks` |
 | Muse | `plugins/brot/.muse-plugin/plugin.json` (native hooks and the skill) | `muse plugins approve brot` |
 | OpenCode | `plugins/brot/opencode/brot.js` | None: plugin files load as code |
+| Antigravity | `plugins/brot/hooks.json` (generated from `hooks/antigravity-hooks.json`), `.antigravity-plugin/plugin.json`, and the skill | None: enabled plugin hooks run on install |
 
-The hooks contain no logic. When `brot` is not installed they do nothing.
+The hooks contain no logic. When `brot` is not installed they do nothing
+(Antigravity hooks emit `{}` to satisfy its JSON output contract).
 
 ## Prerequisite: install `brot`
 
@@ -91,12 +93,31 @@ ln -s "$PWD/bitrot-sanitation-skill/plugins/brot/skills/brot" ~/.config/opencode
   shows `opencode` as declared and firing.
 - **Uninstall:** remove the two symlinks.
 
+## Antigravity
+
+Install the plugin from a local checkout (the repo also ships
+`.agents/plugins.json`, so Antigravity discovers `plugins/brot` automatically
+when this repo is opened as a workspace):
+
+```sh
+git clone https://github.com/smorinlabs/bitrot-sanitation-skill.git
+agy plugin install ./bitrot-sanitation-skill/plugins/brot
+```
+
+- **Inspect:** run `agy plugin list` (or `/hooks` inside Antigravity CLI) to
+  confirm the plugin is enabled and its hooks loaded. Antigravity runs enabled
+  plugin hooks without a separate hook-trust step.
+- **Verify:** start a new session, then run `brot doctor`. The `hooks` section
+  shows `antigravity` as declared and firing.
+- **Uninstall:** `agy plugin uninstall brot`.
+
 ## Development
 
 ```sh
-just gen        # regenerate the Claude Code and Codex manifests (harness-kit)
-just test       # hook text, missing-brot guard, versions, OpenCode module
+just gen        # regenerate the Claude Code, Codex, and Antigravity manifests (harness-kit)
+just test       # hook text, Antigravity structure, missing-brot guard, versions, OpenCode module
 BROT_FIXTURES=<brot-checkout>/tests/fixtures/hooks just test   # also replay captured payloads
+agy plugin validate ./plugins/brot   # 0 errors (warns only on Claude's hooks/hooks.json)
 ```
 
 Hook text must not change between releases unless the release notes flag it:

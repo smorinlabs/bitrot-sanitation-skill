@@ -1,4 +1,4 @@
-# regenerate the Claude Code and Codex manifests and marketplaces
+# regenerate the Claude Code, Codex, and Antigravity manifests and marketplaces
 gen:
     uv run harness-kit gen
 
