@@ -6,11 +6,19 @@ When the plugin's hooks run, `brot` registers, from each shell command:
 
 - worktrees (`git worktree add`);
 - branches (`git checkout -b`, `git switch -c`, `git branch <name>`);
-- pull requests (`gh pr create`).
+- pull requests (`gh pr create`), except on Antigravity where `PostToolUse` omits
+  command stdout (register PRs created in Antigravity by hand).
 
-New files register automatically only on Claude Code (its `Write` tool). Muse
-and OpenCode file writes, and Codex `apply_patch`, register nothing: register
-those files by hand when they matter.
+New files register automatically on Claude Code (its `Write` tool) and
+Antigravity (`write_file` without `Overwrite`/`Append`, and `write_to_file`
+without `Overwrite`; files under `~/.gemini` are excluded by default). Muse and
+OpenCode file writes, Codex `apply_patch`, and Antigravity overwrites or appends
+register nothing: register those files by hand when they matter.
+
+Explicit `brot` commands in the agent shell attribute automatically to the
+current session through each harness's environment variable
+(`CLAUDE_CODE_SESSION_ID`, `CODEX_THREAD_ID`, `MUSE_SESSION_ID`,
+`OPENCODE_SESSION_ID`, or `ANTIGRAVITY_CONVERSATION_ID`).
 
 A hook registration is marked "needs validation" until someone confirms it
 (`brot object validate <obj>`). Codex reports no exit status, so a failed

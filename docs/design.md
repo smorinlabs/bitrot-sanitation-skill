@@ -1,15 +1,15 @@
 # T4 — `bitrot-sanitation-skill`: design
 
-**Status:** design phase, draft 1, written 2026-11-22 against `brot` v0.8.2. It implements `docs/requirements.md` (draft 3). The three decisions in §9 were settled on 2026-11-22.
-**Harness versions checked:** Claude Code 2.1.330, Codex `codex-cli 0.171.0`, Muse Code 1.4.25, OpenCode v2.3.0, harness-kit 0.4.0.
-**Evidence labels** are as in requirements §0.4: **[O]** observed on 2026-11-22, **[D]** from the harness's official documentation, **[U]** unverified.
+**Status:** design phase, draft 1, written 2026-11-22 against `brot` v0.8.2; updated for Antigravity support against `brot` `feat/agy-support` (v0.8.4+). It implements `docs/requirements.md` (draft 3). The three decisions in §9 were settled on 2026-11-22; D-4 settled Antigravity manifest and hook generation.
+**Harness versions checked:** Claude Code 2.1.330, Codex `codex-cli 0.171.0`, Muse Code 1.4.25, OpenCode v2.3.0, Antigravity `1.5.16`, harness-kit 0.5.0+ (Antigravity support in `feat/agy-support`).
+**Evidence labels** are as in requirements §0.4: **[O]** observed, **[D]** from the harness's official documentation, **[U]** unverified.
 
 ## 1. What v1 ships
 
 One plugin named `brot`. It contains:
 
 - one skill, also named `brot` (requirements OQ-07);
-- hook declarations for Claude Code, Codex and Muse;
+- hook declarations for Claude Code, Codex, Muse, and Antigravity;
 - an OpenCode plugin module.
 
 Every hook calls `brot hook <harness> <event>` with the payload on stdin (HC-06). The hooks contain no logic beyond the missing-binary guard (DG-01).
@@ -33,16 +33,20 @@ harness.toml                        marketplace identity (harness-kit)
 plugins/brot/
   plugin.meta.toml                  plugin metadata (harness-kit)
   .claude-plugin/plugin.json        generated
-  .codex-plugin/plugin.json         see §9 D-1
+  .codex-plugin/plugin.json         generated (see §9 D-1)
+  .antigravity-plugin/plugin.json   generated (see §9 D-4)
   .muse-plugin/plugin.json          hand-maintained; native Muse manifest and hooks
+  hooks.json                        generated from hooks/antigravity-hooks.json (Antigravity)
   hooks/hooks.json                  hand-maintained; Claude Code hooks
   hooks/codex-hooks.json            hand-maintained; Codex hooks
+  hooks/antigravity-hooks.json      hand-maintained; Antigravity hooks source
   opencode/brot.js                  hand-maintained; OpenCode module
   skills/brot/SKILL.md
   skills/brot/references/*.md       CV-02 split
   compat.toml                       supported brot range (DS-03)
 .claude-plugin/marketplace.json     generated
-.agents/plugins/marketplace.json    generated
+.agents/plugins/marketplace.json    generated (Codex)
+.agents/plugins.json                generated (Antigravity workspace discovery)
 tests/                              see §7
 ```
 
@@ -51,28 +55,31 @@ tests/                              see §7
 - Claude Code and Codex both load `hooks/hooks.json` by default ([D]). Each command names its harness, so the two harnesses cannot share that file. The Codex manifest therefore points at `hooks/codex-hooks.json` through its `hooks` key.
 - When `.muse-plugin/` is missing, Muse falls back to the Claude manifest and imports `hooks/hooks.json`. It would then run `brot hook claude-code …` ([O] `muse plugins validate`). The native Muse manifest is therefore required.
 - With `.muse-plugin/` present, Muse ignores `hooks/hooks.json` and the other manifests. It warns only `multiple-manifests` ([O]).
+- Antigravity loads hooks strictly from `<plugin-root>/hooks.json` (never `hooks/hooks.json`) and uses a different schema: top-level named hook groups (`{"brot": …}`), flat handler arrays for `SessionStart`/`Stop`, and grouped matcher objects for `PostToolUse` ([D], [O] `agy plugin validate`). Keeping the source at `hooks/antigravity-hooks.json` and declaring `antigravity_hooks = "./hooks/antigravity-hooks.json"` in `plugin.meta.toml` lets `harness-kit gen` render byte-stable `plugins/brot/hooks.json`, `plugins/brot/.antigravity-plugin/plugin.json`, and `.agents/plugins.json`. `agy plugin validate` reports 0 errors and only the expected multi-tool warning on Claude's `hooks/hooks.json` ([O]).
 
 ## 3. Hook declarations
 
 ### 3.1 Events
 
-| `brot` event | Claude Code | Codex | Muse | OpenCode module source |
-|---|---|---|---|---|
-| `session-start` | `SessionStart` | `SessionStart` | `SessionStart` | the first event seen for a root session (`session-created`), and `session.created` for a child session |
-| `session-end` | `SessionEnd` | `SessionEnd` | `SessionEnd` | `session.deleted` (`session-deleted`); `session.execution.*` other than started (`execution-ended`) |
-| `post-tool-use` | `PostToolUse`, matcher `Bash\|Write` | `PostToolUse` | `PostToolUse` | `tool.execute.after` (`tool-after`) |
-| `post-tool-use-failure` | `PostToolUseFailure`, matcher `Bash\|Write` | **not declared**: Codex 0.171.0 has no such event ([O] binary, [D] event list) | `PostToolUseFailure` | — (part of `tool-after`) |
-| `subagent-start` | `SubagentStart` | `SubagentStart` | `SubagentStart` | `session.created` carrying `parentID` |
-| `subagent-stop` | `SubagentStop` | `SubagentStop` | `SubagentStop` | — |
-| `post-compact` | `PostCompact` | `PostCompact` | `PostCompact` | — |
-| `pre-tool` (HC-07a) | `PreToolUse`, matcher `Bash` | `PreToolUse`, matcher `Bash` | see §9 D-2 | `tool.execute.before`, filtered in code to the shell tool |
-| (OpenCode) `session-forked` | — | — | — | `ctx.session.hook("fork")` |
+| `brot` event | Claude Code | Codex | Muse | OpenCode module source | Antigravity |
+|---|---|---|---|---|---|
+| `session-start` | `SessionStart` | `SessionStart` | `SessionStart` | the first event seen for a root session (`session-created`), and `session.created` for a child session | `SessionStart` (flat handler array) |
+| `session-end` | `SessionEnd` | `SessionEnd` | `SessionEnd` | `session.deleted` (`session-deleted`); `session.execution.*` other than started (`execution-ended`) | — (no `SessionEnd` event; sessions age out via transcript staleness) |
+| `post-tool-use` | `PostToolUse`, matcher `Bash\|Write` | `PostToolUse` | `PostToolUse` | `tool.execute.after` (`tool-after`) | `PostToolUse`, matcher `run_command\|write_file\|write_to_file` |
+| `post-tool-use-failure` | `PostToolUseFailure`, matcher `Bash\|Write` | **not declared**: Codex 0.171.0 has no such event ([O] binary, [D] event list) | `PostToolUseFailure` | — (part of `tool-after`) | — (reported via non-empty `error` in `PostToolUse`) |
+| `subagent-start` | `SubagentStart` | `SubagentStart` | `SubagentStart` | `session.created` carrying `parentID` | — (not exposed by Antigravity 1.5.16) |
+| `subagent-stop` | `SubagentStop` | `SubagentStop` | `SubagentStop` | — | — |
+| `post-compact` | `PostCompact` | `PostCompact` | `PostCompact` | — | — |
+| `pre-tool` (HC-07a) | `PreToolUse`, matcher `Bash` | `PreToolUse`, matcher `Bash` | see §9 D-2 | `tool.execute.before`, filtered in code to the shell tool | **not declared**: Antigravity `PreToolUse` requires a `decision` JSON response while `brot` prints nothing on unhandled events; Antigravity has no hash-pinned hook approval, so adding it later costs no re-approval |
+| (OpenCode) `session-forked` | — | — | — | `ctx.session.hook("fork")` | — |
+| (Antigravity) `stop` | — | — | — | — | `Stop` (flat handler array; maps to `ExecutionEnded`, stamping `last_event_at` without closing the session) |
 
-No `Stop` and no `UserPromptSubmit` hook on any harness (T3 `FR-HOOK-19`). `brot` records every event name it does not handle as `ignored`. That includes `pre-tool` today, so declaring it is safe (C-1).
+No `UserPromptSubmit` hook on any harness, and no `Stop` hook on Claude Code, Codex, Muse, or OpenCode (T3 `FR-HOOK-19`). On Antigravity, `Stop` is declared because Antigravity has no `SessionEnd` event; `brot` maps it to `ExecutionEnded` and returns `{}` so the turn finishes normally while keeping the session `active`. `brot` records every event name it does not handle as `ignored`. That includes `pre-tool` today, so declaring it on Claude Code, Codex, Muse, and OpenCode is safe (C-1).
 
 ### 3.2 Command text
 
 - **Claude Code and Codex:** `if command -v brot >/dev/null 2>&1; then brot hook <harness> <event>; fi`. When `brot` is missing, the hook exits 0 and prints nothing (DG-01). `brot doctor` recognises this form; a form such as `sh -c '…'` would show as `unknown` (T3 `FR-HOOK-9`).
+- **Antigravity:** `if command -v brot >/dev/null 2>&1; then brot hook antigravity <event>; else printf '{}\n'; fi`. Antigravity expects every command hook to emit a JSON object on stdout even when `brot` is not installed (`{}` is a no-op / allow response on `SessionStart`, `PostToolUse`, and `Stop`, DG-01). `brot doctor` parses `if …; then brot hook antigravity <event>; else …; fi` and recognises it as declared (`docs/hook-contract.md` §8, [O]).
 - **Muse:** the argument vector `["brot", "hook", "muse", "<event>"]`, with `timeoutMs` set. Observed on Muse 1.4.25 with `muse plugins hook test` in a throwaway Muse home ([O]):
   - Muse finds `brot` on `PATH`, and the hook completes with exit 0.
   - With `brot` missing, the hook ends `failed` with "No such file or directory", and Muse does not block the tool call (`should_block: false`). Muse has no shell guard, so this is the v1 behaviour for DG-01. Whether Muse shows the failure to the user in a live session is [U].
@@ -128,7 +135,7 @@ References (CV-02):
 | `blockers.md` | How to add, evaluate and resolve blockers |
 | `cleanup.md` | Plan, soft risks, hard stops, force rules (SK-11), and how to report a delete |
 | `degraded-modes.md` | `brot` missing, version out of range, the DG-06 checks and their fix commands |
-| `harness-claude-code.md`, `harness-codex.md`, `harness-muse.md`, `harness-opencode.md` | Install, trust step, verification command (HC-02, HC-10) |
+| `harness-claude-code.md`, `harness-codex.md`, `harness-muse.md`, `harness-opencode.md`, `harness-antigravity.md` (currently in `README.md`) | Install, trust/enablement step, verification command (HC-02, HC-10) |
 
 The skill never uses `--force-agent` unless the user asks for it, and then passes the user's request as `--reason` (OQ-15 (f)).
 
@@ -140,22 +147,23 @@ The skill never uses `--force-agent` unless the user asks for it, and then passe
 
 | Layer | What | How |
 |---|---|---|
-| Manifests | Each harness accepts the plugin | `claude plugin validate`, `muse plugins validate --json` (zero errors), `uv run harness-kit gen --check` |
-| Hook text | Every command matches the §3.1 table, and the stability check from §3.3 | a script under `tests/` |
-| Shim replay | Each declared command, run with a payload on stdin and a throwaway `BROT_DB`, records the expected outcome in `brot`'s hook-event record (DEP-13) | Fixtures come from `BROT_FIXTURES`, a path to brot's checkout. None are copied into this public repo (CV-09). Without `BROT_FIXTURES`, the test is skipped and says so |
+| Manifests | Each harness accepts the plugin | `claude plugin validate`, `muse plugins validate --json` (zero errors), `agy plugin validate --json ./plugins/brot` (zero errors; warns only on Claude's `hooks/hooks.json`), `harness-kit gen --check` |
+| Hook text | Every command matches the §3.1 table, Antigravity hook structure/sync holds, and the stability check from §3.3 passes | `python3 -I tests/hooks.py` |
+| Shim replay | Each declared command, run with a payload on stdin and a throwaway `BROT_DB`, records the expected outcome in `brot`'s hook-event record (DEP-13) and (for Antigravity) prints a JSON object on stdout with empty stderr | Fixtures come from `BROT_FIXTURES`, a path to brot's checkout. None are copied into this public repo (CV-09). Without `BROT_FIXTURES`, the test is skipped and says so |
 | OpenCode module | The mappings in §4, against a fake `ctx` | `node --test`, no dependencies (NF-05) |
-| Missing `brot` | Every shim exits 0 with no output when `PATH` has no `brot` | the same script |
+| Missing `brot` | Every shell-guarded shim exits 0 when `PATH` has no `brot` (empty stdout on Claude Code/Codex; `{}` on Antigravity) | `python3 -I tests/hooks.py` |
 | Skill | Fleet skill checks | `skill-quality` layers 1, 2, 3, 4 against the worktree (CV-01) |
 
 ## 8. Verification before v0.1.0
 
-Each check runs in a throwaway harness home (`CODEX_HOME`, the Muse `XDG_*` variables, a temporary Claude config). None touches the user's live configuration.
+Each check runs in a throwaway harness home (`CODEX_HOME`, the Muse `XDG_*` variables, a temporary Claude config, or a temporary `HOME` for Antigravity). None touches the user's live configuration.
 
-1. Install the plugin from a local marketplace on each harness, and confirm the hooks fire, using `brot doctor` with a throwaway `BROT_DB`. Done so far (2026-11-22, [O]):
+1. Install the plugin from a local marketplace on each harness, and confirm the hooks fire, using `brot doctor` with a throwaway `BROT_DB`. Done so far ([O]):
    - Muse: installed and approved in a throwaway Muse home. Its `post-tool-use` hook ran `brot` through `muse plugins hook test`.
    - OpenCode: the module ran against the real `brot` with a captured payload. `brot doctor` reported it `declared` and `firing` from a throwaway OpenCode config directory.
    - Claude Code 2.1.330: one headless session with `--plugin-dir` and a throwaway `BROT_DB` ran `git worktree add`. `brot` recorded `session-start` (ok), `pre-tool` (ignored), `post-tool-use` (ok) and `session-end` (ok), with plugin version `0.0.0`, and registered the worktree and its branch as hook registrations needing validation.
    - Codex 0.171.0: `codex plugin add` into a throwaway `CODEX_HOME` installed a manifest whose `hooks` entry is `./hooks/codex-hooks.json`. No session was run: a throwaway `CODEX_HOME` has no login.
+   - Antigravity 1.5.16: `agy plugin validate --json ./plugins/brot` reported 0 errors (`components.hooks: 1`, `components.skills: 1`, only the expected multi-tool warning on Claude's `hooks/hooks.json`). Fixture replay against `brot` replayed all 11 declared Antigravity payloads cleanly (non-error outcomes, valid JSON stdout, empty stderr), and `brot doctor` detected the installed plugin under `~/.gemini/config/plugins/brot/hooks.json` as `declared` with `post-tool-use`, `session-start`, and `stop`.
 2. On Codex and Muse, approve the hooks. Bump only the plugin version, reinstall, and confirm the hooks still run without a new approval. This tests the HC-06a premise.
 3. ~~Run Muse with `brot` missing~~ Done: the hook fails and does not block (§3.2).
 4. ~~Measure Muse `pre-tool` latency~~ Done 2026-11-22: 8.9 ms p95 (D-2).
@@ -167,6 +175,7 @@ Each check runs in a throwaway harness home (`CODEX_HOME`, the Muse `XDG_*` vari
 | D-1 | How does the Codex manifest get its `hooks` key? harness-kit 0.4.0 cannot write it, and `plugin.meta.toml` rejects unknown keys | A: add an optional `codex_hooks` path to harness-kit (a separate PR in that repo), then generate. B: set `codex = false` and hand-maintain `.codex-plugin/plugin.json` | **Decided 2026-11-22 (owner): A.** Shipped in harness-kit v0.5.0 (`codex_hooks`); `plugin.meta.toml` sets `codex_hooks = "./hooks/codex-hooks.json"` |
 | D-2 | Muse rejects `matcher`, so a Muse `pre-tool` hook runs `brot` on every tool call | A: declare it. B: leave it out until Muse supports matchers | **Decided on evidence: A.** `brot hook muse pre-tool` measured 7.7 ms p50 and 8.9 ms p95 over 60 runs (2026-11-22, brot 0.8.2), far inside the 100 ms p95 budget of T3 `FR-HOOK-7` |
 | D-3 | OpenCode session ID for `brot` commands the agent runs (HC-12, T3 `FR-HOOK-4`) | A: inject `BROT_SESSION` as env. B: prefix the command, as HC-12 says. C: inject nothing and require OpenCode 2.3.0 or later, which sets `OPENCODE_SESSION_ID` itself | **Decided 2026-11-22 (owner): C.** v1 requires OpenCode 2.3.0 or later. The prefix can be added later without changing any other hook |
+| D-4 | How are Antigravity's `.antigravity-plugin/plugin.json`, plugin-root `hooks.json`, and repo-level `.agents/plugins.json` maintained? | A: extend harness-kit with Antigravity manifest + `antigravity_hooks` generation, then declare `antigravity_hooks = "./hooks/antigravity-hooks.json"` in `plugin.meta.toml`. B: hand-maintain all three Antigravity files alongside harness-kit | **Decided (A).** Implemented in `harness-kit` (`feat/agy-support`); `plugin.meta.toml` sets `antigravity_hooks = "./hooks/antigravity-hooks.json"` so `harness-kit gen --check` prevents drift across all generated manifests and `plugins/brot/hooks.json` |
 
 ## 10. Notes for T3 (`brot`)
 

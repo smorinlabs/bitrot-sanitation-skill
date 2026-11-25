@@ -36,7 +36,7 @@ Each harness fact carries one label:
 - **[F]** taken from a fleet document. The document named is `skill-create/references/in-repo-marketplace.md`, verified on Claude Code 2.1.x and Codex 0.145.0 in 2026-07.
 - **[U]** unverified. It must be confirmed during design, and it is tracked as an open question or a design task.
 
-Local versions observed: Claude Code `2.1.322`, Codex `codex-cli 0.167.2`, Muse `Muse Code 1.4.15`, OpenCode `v2.2.7`.
+Local versions observed: Claude Code `2.1.322`, Codex `codex-cli 0.167.2`, Muse `Muse Code 1.4.15`, OpenCode `v2.2.7`, Antigravity `1.5.16` (added when Antigravity support landed).
 
 ## 1. Terms
 
@@ -45,7 +45,7 @@ Local versions observed: Claude Code `2.1.322`, Codex `codex-cli 0.167.2`, Muse 
 | **object** | Something an agent created that may need cleanup: file, directory, worktree, branch, PR, cloud resource, or a custom type. Defined by `T3:registry`. |
 | **blocker** | A condition that must be true before an object may be cleaned up, such as "PR `https://github.com/o/r/pull/12` is merged". Defined by `T3:registry`. |
 | **exact reference** | A machine-checkable identifier: full PR URL, absolute path, `<repo-path>@<branch>`, cloud resource ID (for example an ARN or a GCP resource name), or a harness session ID. Prose such as "after the PR lands" is not an exact reference. |
-| **harness** | One of the four agent runtimes in scope: Claude Code, Codex, OpenCode, Muse. |
+| **harness** | One of the five agent runtimes in scope: Claude Code, Codex, OpenCode, Muse, Antigravity. |
 | **hook declaration** | The harness-specific file or module in this plugin that runs a `brot` command when a harness event fires. |
 | **thin shim** | A hook declaration that contains no logic beyond calling `brot` with the event payload. |
 | **safe-delete** | `brot`'s cleanup commands, which run a sanity pass before deleting anything (`T3:safe-delete`). |
@@ -74,12 +74,15 @@ These facts shape the requirements in section 3. They are **not** the hooks gap 
 | E14 | OpenCode | Local plugins are **JavaScript/TypeScript modules** in `~/.config/opencode/plugins/` that subscribe to events such as `permission.asked` and session status. OpenCode hooks are therefore code, not JSON. | [O] 2.2.7 |
 | E15 | OpenCode | Whether OpenCode discovers skills from `~/.agents/skills` or `.claude/skills`, in addition to `~/.config/opencode/skills`, is unknown. | [U] |
 | E16 | All | Session stores and fork lineage fields for all four harnesses are already documented by `session-inventory-cli` (`smorinlabs-skills/plugins/session/docs/session-inventory-cli.md`): Codex `forked_from_id`, Muse `msp_fork_source_session_id`, OpenCode `parent_id` / `fork_session_id`. | [O] doc |
+| E17 | Antigravity | Has `agy plugin install / uninstall / list / enable / disable / validate`. Native plugins declare `.antigravity-plugin/plugin.json` (strict schema with `additionalProperties: false`) and `<plugin-root>/hooks.json` (never `hooks/hooks.json`). Repo-level `.agents/plugins.json` enables automatic workspace discovery. | [O] 1.5.16 |
+| E18 | Antigravity | `hooks.json` uses top-level named hook groups (`{"brot": …}`), flat handler arrays for `SessionStart`/`Stop`, and grouped matcher entries for `PostToolUse`. Payloads use camelCase JSON on stdin and expect a JSON object on stdout (`{}` when there is no context to inject). | [O] 1.5.16 |
+| E19 | Antigravity | Enabled plugin hooks run without a separate per-hook trust hash. Explicit `brot` commands in the agent shell receive `ANTIGRAVITY_CONVERSATION_ID`, and plugin hooks receive `PLUGIN_ROOT`. | [O] 1.5.16 |
 
 ## 3. Requirements
 
 ### 3.1 Harness coverage (HC)
 
-- **HC-01** — The plugin MUST support Claude Code, Codex, OpenCode, and Muse.
+- **HC-01** — The plugin MUST support Claude Code, Codex, OpenCode, Muse, and Antigravity.
 - **HC-02** — For each harness, the repo MUST document one install path, one uninstall path, and one verification command that proves the skill and hooks loaded.
 - **HC-03** — Claude Code and Codex MUST install the plugin from a marketplace catalog (E1, E3). The layout is home 5 (OQ-02, CV-06).
 - **HC-04** — Muse SHOULD install from the same git marketplace source (E8). If Muse cannot read the hook declarations in that plugin (E9 format unknown), the repo MUST ship a Muse-specific hook declaration and document how to install it.
@@ -91,17 +94,18 @@ These facts shape the requirements in section 3. They are **not** the hooks gap 
 - **HC-07** — The set of hook events wired per harness MUST come from T3's hooks gap table (`T3:hooks`). For each harness the repo MUST record which `brot` needs it covers: session start, session end, tool use that creates an object, tool use that deletes something, and subagent or fork start. The gap table MUST also record two capabilities per harness, because SL-04 and OQ-03 depend on them:
   - whether a hook's output reaches the model's context (needed for the session-start summary);
   - whether a pre-tool-use hook can add a warning, deny the call, or neither (required: the v1 pre-tool hook in HC-07a must be able to enforce later without a definition change).
-- **HC-07a** — **Pre-tool hook ships in v1 with the guard off** (X2 decided B, 2026-11-12). Each harness MUST get a pre-tool-use hook limited to shell commands (matcher `Bash` or the harness equivalent) that calls `brot hook <harness> pre-tool`. In v1 `brot` passes every command through unchanged: no warning, no block. A later `brot` release can turn on the guard (T3 `FR-HOOK-16`) without changing the hook text (HC-06a), so no user re-approves anything. The hook MUST stay within T3's tool-path budget (`FR-HOOK-7`, 100 ms p95). *C-1 decided B and resolved (§7.4.3): T3's design accepts `brot hook <harness> pre-tool` as an ignored event.*
+- **HC-07a** — **Pre-tool hook ships in v1 with the guard off** (X2 decided B, 2026-11-12). Each harness with a pass-through pre-tool contract (Claude Code, Codex, Muse, OpenCode) MUST get a pre-tool-use hook limited to shell commands (matcher `Bash` or the harness equivalent) that calls `brot hook <harness> pre-tool`. In v1 `brot` passes every command through unchanged: no warning, no block. A later `brot` release can turn on the guard (T3 `FR-HOOK-16`) without changing the hook text (HC-06a), so no user re-approves anything. The hook MUST stay within T3's tool-path budget (`FR-HOOK-7`, 100 ms p95). *C-1 decided B and resolved (§7.4.3): T3's design accepts `brot hook <harness> pre-tool` as an ignored event.* *Antigravity omits `PreToolUse` in v1: its `PreToolUse` contract requires a `decision` JSON object on stdout while `brot` prints nothing on unhandled events, and Antigravity has no hash-pinned hook approval.*
 - **HC-08** — Where T3's gap table marks an event as **missing** for a harness, the plugin MUST name the fallback, in this order of preference:
   1. **Build the hook.** T3's brief says missing hooks "will be created from scratch". For OpenCode a built hook is code in the plugin module (E14). A built hook ships in this plugin, not in `brot` (OQ-11).
   2. A skill-driven manual step (SK, SL).
   3. A `brot` liveness check (`DEP-06`).
   4. "Unsupported", stated in the docs.
 - **HC-09** — The plugin ships the hook declarations for every harness, and the harness loads them on plugin install (OQ-01, decided 2026-11-12). `brot` MUST NOT be required to write harness hook config.
-- **HC-10** — Install docs MUST tell the user about the trust step for each harness: Codex hook trust (E5), Muse `muse plugins approve` (E7, E11), and the Claude Code plugin enable step.
+- **HC-10** — Install docs MUST tell the user about the trust or enablement step for each harness: Codex hook trust (E5), Muse `muse plugins approve` (E7, E11), the Claude Code plugin enable step, and Antigravity plugin enablement (`agy plugin list` / `agy plugin enable brot`; no separate hook-trust step, E19).
 - **HC-11** — The plugin MUST NOT require `--dangerously-bypass-hook-trust` or any equivalent bypass flag.
 - **HC-12** — The OpenCode module MUST perform the harness-specific work T3 assigns to it: inject `BROT_SESSION` into each shell (T3 `FR-HOOK-4`; *owner decision 2026-11-22, design D-3: not injected; v1 requires OpenCode 2.3.0 or later, which sets `OPENCODE_SESSION_ID` itself*), synthesize session start from `session.created` (`FR-HOOK-11`), map `session.execution.interrupted` and `session.deleted` to session end and not treat `session.idle` as an end (`FR-HOOK-12`), and derive subagent stop from child-session events (`FR-HOOK-13`). Each mapping MUST then call `brot hook opencode <event>`.
 - **HC-13** — The Muse hook declaration MUST use `.muse-plugin/plugin.json` `capabilities.hooks[]` (T3 gap table C13), validated with `muse plugins validate` and tested with `muse plugins hook test --fixture` (T3 `FR-HOOK-10`).
+- **HC-14** — The Antigravity plugin MUST ship `.antigravity-plugin/plugin.json`, plugin-root `hooks.json` (generated from `hooks/antigravity-hooks.json` via `harness-kit`), and repo-level `.agents/plugins.json`, declaring `SessionStart`, `PostToolUse` (matcher `run_command|write_file|write_to_file`), and `Stop` with a missing-`brot` guard that prints `{}` on stdout, and MUST pass `agy plugin validate` with zero errors (E17, E18).
 
 ### 3.2 Skill behaviour (SK)
 
@@ -231,8 +235,8 @@ These facts shape the requirements in section 3. They are **not** the hooks gap 
 - **NF-01** — Hook latency follows T3: tool-path hooks under 100 ms p95 (T3 `FR-HOOK-7`) and session-end work under 1 s (T3 `FR-HOOK-6`). A shim MUST add no measurable time beyond the `brot` call.
 - **NF-02** — Hooks MUST be safe under concurrent sessions. Concurrency inside `brot` is `T3:storage`.
 - **NF-03** — The session-start context injection (SL-04) MUST be capped. Proposed cap: 15 objects or about 1,500 characters, with a pointer to the full `brot` status command.
-- **NF-04** — Testing MUST include: the fleet's deep, strict skill verifier; the fleet install-test recipe on Claude Code and Codex; `muse plugins hook test --fixture` for Muse hooks; a fixture-driven test of the OpenCode module; and one headless end-to-end run per harness with a throwaway `brot` database.
-- **NF-05** — Command-type hook shims (Claude Code, Codex, Muse) MUST be POSIX `sh`-compatible on macOS and Linux. The OpenCode shim is a JS/TS module (E14) and MUST NOT need dependencies beyond what OpenCode provides. Windows support is out of scope for v1 (section 5).
+- **NF-04** — Testing MUST include: the fleet's deep, strict skill verifier; the fleet install-test recipe on Claude Code and Codex; `muse plugins hook test --fixture` for Muse hooks; `agy plugin validate` for Antigravity; a fixture-driven test of the OpenCode module; and fixture replay / headless end-to-end runs with a throwaway `brot` database.
+- **NF-05** — Command-type hook shims (Claude Code, Codex, Muse, Antigravity) MUST be POSIX `sh`-compatible on macOS and Linux. The OpenCode shim is a JS/TS module (E14) and MUST NOT need dependencies beyond what OpenCode provides. Windows support is out of scope for v1 (section 5).
 
 ## 4. Dependencies on `brot` (T3 to own)
 
@@ -262,7 +266,7 @@ These are what the plugin needs from `brot`. They are listed so T3 can confirm o
 - The `brot` CLI itself: schema, commands, safe-delete rules, storage (T3).
 - Object-type extensibility through plugins (deferred in T3; informed by T7).
 - Session discovery across harnesses beyond what `brot` registers. `session-inventory-cli` (session plugin) and T6 `lost-sessions` own that.
-- Harnesses other than the four named. Windows hosts.
+- Harnesses other than the five named. Windows hosts.
 - Cleaning up objects created before `brot` was installed, except through OQ-04.
 
 ## 6. Open questions (decision requests)

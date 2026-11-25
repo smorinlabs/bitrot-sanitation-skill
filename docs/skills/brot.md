@@ -4,8 +4,8 @@
 
 ## What it does
 
-Teaches a coding agent to keep the `brot` registry complete and to clean up
-only through `brot`:
+Teaches a coding agent (Claude Code, Codex, Muse, OpenCode, or Antigravity) to
+keep the `brot` registry complete and to clean up only through `brot`:
 
 - register objects the hooks missed;
 - record blockers;

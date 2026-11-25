@@ -1,3 +1,4 @@
 # Supported brot versions (DS-03). The only place this range is written.
 # The skill reads it and compares it with `brot --version`.
+# Antigravity hooks require a brot build with antigravity harness support.
 brot = ">=0.8.2, <0.9.0"
