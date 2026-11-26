@@ -96,3 +96,59 @@ test("a missing brot never throws into OpenCode", async () => {
   await tick();
   failSpawn = false;
 });
+
+// P18: clearedFrom on a new root session, only when exactly one other live
+// root exists in this plugin instance. A fresh module copy per test keeps the
+// module-level session state separate.
+async function freshPlugin(tag) {
+  return (await import(`../plugins/brot/opencode/brot.js?p18=${tag}`)).default;
+}
+
+test("a /clear in one window names the session it replaced", async () => {
+  const p = await freshPlugin("one-window");
+  calls.length = 0;
+  const ctx = fakeCtx([
+    { type: "session.created", data: { sessionID: "A" } },
+    { type: "session.created", data: { sessionID: "B" } },
+    { type: "session.created", data: { sessionID: "C" } },
+  ]);
+  await p.setup(ctx);
+  await tick();
+  const created = calls.filter((c) => c.argv[3] === "session-created").map((c) => c.payload);
+  assert.equal(created[0].clearedFrom, undefined);
+  assert.equal(created[1].clearedFrom, "A");
+  assert.equal(created[2].clearedFrom, "B");
+});
+
+test("two live roots in one server send no clearedFrom", async () => {
+  const p = await freshPlugin("shared-server");
+  calls.length = 0;
+  const ctx = fakeCtx([
+    { type: "session.created", data: { sessionID: "X" } },
+  ]);
+  await p.setup(ctx);
+  await tick(); // X's session.created is handled first, as a real server sends it
+  // A second window's session shows up through its first tool event.
+  await ctx.hooks["tool.execute.after"]({ sessionID: "Y", tool: "shell" });
+  await tick();
+  const ctx2 = fakeCtx([{ type: "session.created", data: { sessionID: "Z" } }]);
+  await p.setup(ctx2);
+  await tick();
+  const z = calls.filter((c) => c.argv[3] === "session-created").map((c) => c.payload).at(-1);
+  assert.equal(z.data.sessionID, "Z");
+  assert.equal(z.clearedFrom, undefined);
+});
+
+test("a deleted root is not taken as the one /clear replaced", async () => {
+  const p = await freshPlugin("deleted");
+  calls.length = 0;
+  const ctx = fakeCtx([
+    { type: "session.created", data: { sessionID: "A" } },
+    { type: "session.deleted", data: { sessionID: "A" } },
+    { type: "session.created", data: { sessionID: "B" } },
+  ]);
+  await p.setup(ctx);
+  await tick();
+  const b = calls.filter((c) => c.argv[3] === "session-created").map((c) => c.payload).at(-1);
+  assert.equal(b.clearedFrom, undefined);
+});

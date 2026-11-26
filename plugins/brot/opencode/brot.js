@@ -4,7 +4,19 @@
 // `brot hook opencode <event>` on stdin and never throws into OpenCode.
 
 const startedRoots = new Set(); // sessions brot has seen start
+const liveRoots = new Set(); // root sessions open in this server, newest last
 const pendingContext = new Map(); // sessionID -> session-start text not yet shown
+
+// A new root session after /clear replaces the old one in the same window.
+// OpenCode does not say which, so name it only when exactly one other root
+// is live in this server: several windows sharing one server send nothing.
+function clearedFrom(sessionID) {
+  const others = [...liveRoots].filter((id) => id !== sessionID);
+  liveRoots.add(sessionID);
+  if (others.length !== 1) return undefined;
+  liveRoots.delete(others[0]);
+  return others[0];
+}
 
 async function brot(event, payload, wait) {
   const input = JSON.stringify(payload);
@@ -53,6 +65,9 @@ function keepContext(sessionID, out) {
 async function startRoot(sessionID) {
   if (!sessionID || startedRoots.has(sessionID)) return;
   startedRoots.add(sessionID);
+  // Only a delivered session.created can be a /clear (P17 capture); a root
+  // first seen through its tool events is counted as live, never linked.
+  liveRoots.add(sessionID);
   keepContext(sessionID, await brot("session-created", { data: { sessionID } }, true));
 }
 
@@ -69,8 +84,12 @@ export default {
             const id = ev.data && ev.data.sessionID;
             if (id) startedRoots.add(id);
             if (ev.data && ev.data.parentID) void brot("session-created", ev, false);
-            else if (id) keepContext(id, await brot("session-created", ev, true));
+            else if (id) {
+              const old = clearedFrom(id);
+              keepContext(id, await brot("session-created", old ? { ...ev, clearedFrom: old } : ev, true));
+            }
           } else if (type === "session.deleted") {
+            if (ev.data && ev.data.sessionID) liveRoots.delete(ev.data.sessionID);
             void brot("session-deleted", ev, false);
           } else if (typeof type === "string" && type.startsWith("session.execution.") && type !== "session.execution.started") {
             void brot("execution-ended", ev, false);

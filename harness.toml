@@ -6,7 +6,7 @@
 [marketplace]
 name = "bitrot-sanitation-skill"
 description = "The brot plugin: track and safely clean up what coding agents create"
-version = "0.1.0"
+version = "0.1.1"
 display_name = "bitrot sanitation"
 
 [marketplace.owner]

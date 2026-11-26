@@ -1,5 +1,12 @@
 # Release notes
 
+## v0.1.1 (2026-11-26)
+
+**Hooks: unchanged.** No hook definition changed, so no new trust or approval is needed.
+
+### Added
+- OpenCode: after `/clear`, the module names the session it replaced (`clearedFrom` on the new root `session-created`). It does this only when exactly one other root session is live in the same OpenCode server, so several windows sharing one server never get a wrong link. brot 0.8.5 or later records `continues` from it; older brot ignores the field.
+
 ## v0.1.0 — first release (2026-11-22)
 
 **Hooks: all new.** This is the first release, so every hook is new. After you install it:
