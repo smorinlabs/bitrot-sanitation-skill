@@ -1,5 +1,5 @@
 name = "brot"
-version = "0.1.0"
+version = "0.1.1"
 description = "Teaches coding agents to register what they create (worktrees, branches, PRs, files, cloud resources) with the brot CLI and to clean it up only through brot's checks. Ships the brot skill and thin hooks that call `brot hook <harness> <event>`."
 author = "Steve Morin"
 codex_hooks = "./hooks/codex-hooks.json"

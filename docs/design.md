@@ -115,6 +115,7 @@ Unverified: whether a version bump with unchanged hook text really keeps the app
   - child sessions start through `session.created` carrying `parentID`.
 - **Calls:** `Bun.spawn(["brot", "hook", "opencode", event])`, written as that literal array because `brot doctor` recognises only literal forms. Without Bun it uses `node:child_process`. The JSON payload goes on stdin. The module awaits the call only for a root `session-created` and for `session-forked`, the two events where `brot` prints context. Every other call runs without waiting, so the agent is never blocked.
 - **Context:** the printed `{"context": …}` text is added once, to that session's next model request, through `ctx.session.hook("context")`. The module reads the session from the hook's `sessionID` field. The docs do not list that field, so context injection is [U] until a live run (§8).
+- **`/clear` (P18):** a delivered root `session.created` names the session it replaced as `clearedFrom`, only when exactly one other root is live in this server (several windows sharing a server send nothing). A root first seen through its tool events is counted as live, never linked. brot 0.8.5 records `continues` from it.
 - **Guard (DG-01):** a failed spawn is caught and dropped. It is never thrown into OpenCode.
 - **Install:** copy or symlink the module into `~/.config/opencode/plugins/` (OQ-06). The skill is found through `~/.claude/skills` or `~/.agents/skills` ([D]). Whether OpenCode 2.3.0 honours `.agents/skills` is [U].
 
